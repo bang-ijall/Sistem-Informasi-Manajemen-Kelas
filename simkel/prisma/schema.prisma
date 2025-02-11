@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum role {
+  siswa
+  guru
+}
+
+model siswa {
+  id Int @id @default(autoincrement())
+  nisn String @unique
+  nama String
+  hp String @unique
+  tahun_masuk String
+  kelas Int
+  class kelas @relation(fields: [kelas], references: [id])
+  nama_wali String
+  tanggal_lahir String @db.VarChar(10)
+  hp_wali String @unique
+}
+
+model guru {
+  id Int @id @default(autoincrement())
+  nip String @unique
+  nama String
+  hp String @unique
+  kelas Int?
+  class kelas? @relation(fields: [kelas], references: [id])
+  tanggal_lahir DateTime
+}
+
+model kelas {
+  id Int @id @default(autoincrement())
+  nama String @unique
+  siswa siswa[]
+  guru guru[]
+}
+
+model user {
+  id Int @id @default(autoincrement())
+  username String @unique
+  password String
+  role role
+}
