@@ -3,48 +3,156 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgres"
   url      = env("DATABASE_URL")
 }
 
 enum role {
   siswa
   guru
+  wali_siswa
+}
+
+enum hadir {
+  no_hadir
+  hadir
+  izin
+}
+
+enum task {
+  kuis
+  submission
+}
+
+enum task_status {
+  belum
+  sudah
+  dinilai
+}
+
+model roster {
+  id          Int    @id @default(autoincrement())
+  hari        String
+  jam_mulai   String
+  jam_selesai String
+  kelas       String
+  class       kelas  @relation(fields: [kelas], references: [kode])
+  guru        String
+  teacher     guru   @relation(fields: [guru], references: [nip])
+
+  kehadiran kehadiran[]
 }
 
 model siswa {
-  id Int @id @default(autoincrement())
-  nisn String @unique
-  nama String
-  hp String @unique
+  id          Int    @id @default(autoincrement())
+  nisn        String @unique
+  nama        String
+  hp          String @unique
   tahun_masuk String
-  kelas Int
-  class kelas @relation(fields: [kelas], references: [id])
-  nama_wali String
-  tanggal_lahir String @db.VarChar(10)
-  hp_wali String @unique
+  kelas       String
+  class       kelas  @relation(fields: [kelas], references: [kode])
+  nama_wali   String
+  hp_wali     String @unique
+  user        user   @relation(fields: [nisn], references: [id])
+
+  kehadiran    kehadiran[]
+  status_tugas status_tugas[]
 }
 
 model guru {
-  id Int @id @default(autoincrement())
-  nip String @unique
-  nama String
-  hp String @unique
-  kelas Int?
-  class kelas? @relation(fields: [kelas], references: [id])
-  tanggal_lahir DateTime
+  id        Int       @id @default(autoincrement())
+  nip       String    @unique
+  nama      String
+  hp        String    @unique
+  kelas     String?   @unique
+  class     kelas?    @relation(fields: [kelas], references: [kode])
+  pelajaran String
+  lesson    pelajaran @relation(fields: [pelajaran], references: [kode])
+  user      user      @relation(fields: [nip], references: [id])
+
+  roster roster[]
+  tugas  tugas[]
+  materi materi[]
 }
 
-model kelas {
-  id Int @id @default(autoincrement())
-  nama String @unique
-  siswa siswa[]
+model pelajaran {
+  kode     String @id
+  nama     String
+  kategori String
+
   guru guru[]
 }
 
+model kelas {
+  kode String @id
+  nama String @unique
+
+  siswa  siswa[]
+  guru   guru[]
+  roster roster[]
+  tugas  tugas[]
+  materi materi[]
+}
+
 model user {
-  id Int @id @default(autoincrement())
-  username String @unique
-  password String
-  role role
+  id           String @id
+  password     String
+  old_password String
+
+  foto  String?
+  role  role
+  siswa siswa?
+  guru  guru?
+}
+
+model kehadiran {
+  id      Int      @id @default(autoincrement())
+  tanggal DateTime
+  status  hadir
+  siswa   String
+  student siswa    @relation(fields: [siswa], references: [nisn])
+  roster  Int
+  roster_ roster   @relation(fields: [roster], references: [id])
+}
+
+model tugas {
+  id            Int      @id @default(autoincrement())
+  judul         String
+  deskripsi     String?
+  batas_waktu   DateTime
+  jenis         task
+  waktu_kuis    Int?
+  soal_kuis     Json?
+  dokumen_tugas String[]
+  tanggal       DateTime
+  kelas         String
+  class         kelas    @relation(fields: [kelas], references: [kode])
+  guru          String
+  teacher       guru     @relation(fields: [guru], references: [nip])
+
+  status_tugas status_tugas[]
+}
+
+model status_tugas {
+  id      Int         @id @default(autoincrement())
+  siswa   String
+  student siswa       @relation(fields: [siswa], references: [nisn])
+  tugas   Int
+  task    tugas       @relation(fields: [tugas], references: [id])
+  status  task_status
+  berkas  String[]
+  tanggal DateTime?
+  nilai   Int?
+}
+
+model materi {
+  id        Int      @id @default(autoincrement())
+  judul     String
+  deskripsi String?
+  modul     String[]
+  tanggal   DateTime
+  kelas     String
+  class     kelas    @relation(fields: [kelas], references: [kode])
+  guru      String
+  teacher   guru     @relation(fields: [guru], references: [nip])
 }
