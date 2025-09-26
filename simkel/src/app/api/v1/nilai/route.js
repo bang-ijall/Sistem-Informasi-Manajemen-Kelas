@@ -4,7 +4,7 @@ import { select } from "@nextui-org/react";
 
 const hari = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
-export async function GET(request) {
+export async function GET(request, { params }) {
     const output = {
         error: true,
         message: "Server kami menolak permintaan dari anda!"
@@ -16,19 +16,29 @@ export async function GET(request) {
         if (!auth.error) {
             let roster = null
 
-            if (auth.message.role != "guru") {
-                roster = await prisma.roster.findMany({
+            if (auth.message.role == "guru") {
+                const { id } = await params
+
+                const tugas = await prisma.tugas.findUnique({
                     where: {
-                        kelas: auth.message.kelas
+                        id: id,
+                        guru: auth.message.id,
                     },
                     select: {
-                        hari: true,
-                        jam_mulai: true,
-                        jam_selesai: true,
-                        teacher: {
+                        judul: true,
+                        deskripsi: true,
+                        batas_waktu: true,
+                        dokumen_tugas: true,
+                        jenis: true,
+                        tanggal: true,
+                        status: {
                             select: {
-                                nama: true,
-                                lesson: {
+                                id: true,
+                                status: true,
+                                berkas: true,
+                                tanggal: true,
+                                nilai: true,
+                                student: {
                                     select: {
                                         nama: true
                                     }
@@ -37,22 +47,24 @@ export async function GET(request) {
                         }
                     }
                 })
-            } else {
-                roster = await prisma.roster.findMany({
-                    where: {
-                        guru: auth.message.id
-                    },
-                    select: {
-                        hari: true,
-                        jam_mulai: true,
-                        jam_selesai: true,
-                        class: {
-                            select: {
-                                nama: true
-                            }
-                        }
+
+                if (tugas) {
+                    output.error = false
+                    output.message = "Berhasil mengambil data"
+                    output.data = {
+                        
                     }
-                })
+                    } else {
+                        output.data = roster.map(i => ({
+                            hari: i.hari,
+                            jam_mulai: i.jam_mulai,
+                            jam_selesai: i.jam_selesai,
+                            kelas: i.class.nama
+                        }))
+                    }
+                }
+            } else {
+
             }
 
             if (roster.length > 0) {

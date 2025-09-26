@@ -12,68 +12,70 @@ export async function GET(request) {
         const auth = CheckAuth(request)
 
         if (!auth.error) {
-            const kehadiran = await prisma.kehadiran.findMany({
-                where: {
-                    siswa: auth.message.id
-                },
-                select: {
-                    id: true,
-                    tanggal: true,
-                    status: true,
-                    roster_: {
-                        select: {
-                            id: true,
-                            teacher: {
-                                select: {
-                                    lesson: {
-                                        select: {
-                                            nama: true
+            if (auth.message.role != "guru") {
+                const kehadiran = await prisma.kehadiran.findMany({
+                    where: {
+                        siswa: auth.message.id
+                    },
+                    select: {
+                        id: true,
+                        tanggal: true,
+                        status: true,
+                        roster_: {
+                            select: {
+                                id: true,
+                                teacher: {
+                                    select: {
+                                        lesson: {
+                                            select: {
+                                                nama: true
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            })
+                })
 
-            if (kehadiran.length > 0) {
-                output.error = false
-                output.message = "Berhasil mengambil data"
+                if (kehadiran.length > 0) {
+                    output.error = false
+                    output.message = "Berhasil mengambil data"
 
-                const grouped = kehadiran.reduce((data, k) => {
-                    const id = k.roster_.id
-                    const nama = k.roster_.teacher.lesson.nama
+                    const grouped = kehadiran.reduce((data, k) => {
+                        const id = k.roster_.id
+                        const nama = k.roster_.teacher.lesson.nama
 
-                    if (!data[id]) {
-                        data[id] = {
-                            id: id,
-                            roster: nama,
-                            total: 0,
-                            hadir: 0,
-                            absen: 0,
-                            izin: 0
+                        if (!data[id]) {
+                            data[id] = {
+                                id: id,
+                                roster: nama,
+                                total: 0,
+                                hadir: 0,
+                                absen: 0,
+                                izin: 0
+                            }
                         }
-                    }
 
-                    data[id].total++
+                        data[id].total++
 
-                    switch (k.status) {
-                        case "hadir":
-                            data[id].hadir++
-                            break
-                        case "no_hadir":
-                            data[id].absen++
-                            break
-                        case "izin":
-                            data[id].izin++
-                            break
-                    }
-                    
-                    return data
-                }, {})
+                        switch (k.status) {
+                            case "hadir":
+                                data[id].hadir++
+                                break
+                            case "no_hadir":
+                                data[id].absen++
+                                break
+                            case "izin":
+                                data[id].izin++
+                                break
+                        }
 
-                output.data = Object.values(grouped)
+                        return data
+                    }, {})
+
+                    output.data = Object.values(grouped)
+                }
             }
         } else {
             return Response.json(auth)

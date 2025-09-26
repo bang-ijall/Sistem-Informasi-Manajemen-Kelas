@@ -1,7 +1,7 @@
 import prisma from "@/libs/prisma"
 import { CheckAuth } from "../auth/auth.js"
-import bcrypt from "bcryptjs"
-import { select } from "@nextui-org/react"
+import { utcToZonedTime } from "date-fns-tz"
+import { startOfDay, endOfDay } from "date-fns"
 
 export async function GET(request) {
     const output = {
@@ -13,7 +13,9 @@ export async function GET(request) {
         const auth = CheckAuth(request)
 
         if (!auth.error) {
-            const today = new Date();
+            const timeZone = "Asia/Jakarta"
+            const start = new Date(formatInTimeZone(new Date(), timeZone, "yyyy-MM-dd'T'00:00:00XXX"))
+            const end = new Date(formatInTimeZone(new Date(), timeZone, "yyyy-MM-dd'T'23:59:59.999XXX"))
 
             const kelas = await prisma.kelas.findUnique({
                 where: {
@@ -23,8 +25,8 @@ export async function GET(request) {
                     tugas: {
                         where: {
                             tanggal: {
-                                gte: new Date(today.setHours(0, 0, 0, 0)),
-                                lte: new Date(today.setHours(23, 59, 59, 999))
+                                gte: start,
+                                lte: end
                             }
                         },
                         select: {
@@ -50,8 +52,8 @@ export async function GET(request) {
                     materi: {
                         where: {
                             tanggal: {
-                                gte: new Date(today.setHours(0, 0, 0, 0)),
-                                lte: new Date(today.setHours(23, 59, 59, 999))
+                                gte: start,
+                                lte: end
                             }
                         },
                         select: {
@@ -108,9 +110,10 @@ export async function GET(request) {
                 }
             }
         } else {
-            // return Response.json(auth)
+            return Response.json(auth)
         }
     } catch (error) {
+        console.error(error)
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
