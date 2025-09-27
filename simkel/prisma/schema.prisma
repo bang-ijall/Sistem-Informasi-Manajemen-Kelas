@@ -143,7 +143,7 @@ model status_tugas {
   status  task_status
   berkas  String[]
   tanggal DateTime?
-  nilai   Int?
+  nilai   Float?
 }
 
 model materi {

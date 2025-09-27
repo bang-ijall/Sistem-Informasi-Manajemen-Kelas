@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { formatInTimeZone } from "date-fns-tz"
 
 function isAuthValid(req) {
     const authHeader = req.headers.get("authorization");
@@ -33,4 +34,12 @@ export function CheckAuth(req) {
     }
 
     return { error: false, message: user };
+}
+
+export function GetDatetime(date, zone) {
+    if (zone == "UTC") {
+        return formatInTimeZone(date, zone, "yyyy-MM-dd'T'HH:mm:ss.SSS")
+    } else {
+        return formatInTimeZone(date, zone, "yyyy-MM-dd HH:mm:ss")
+    }
 }

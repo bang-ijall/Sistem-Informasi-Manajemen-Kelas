@@ -14,22 +14,22 @@ export async function GET(request, { params }) {
             if (auth.message.role == "guru") {
                 const { id } = await params
 
-                const roster = await prisma.roster.findUnique({
+                const tugas = await prisma.tugas.findUnique({
                     where: {
-                        id: Number(id)
+                        id: Number(id),
+                        guru: auth.message.id,
                     },
                     select: {
-                        class: {
+                        status_tugas: {
                             select: {
-                                siswa: {
+                                id: true,
+                                status: true,
+                                berkas: true,
+                                tanggal: true,
+                                nilai: true,
+                                student: {
                                     select: {
-                                        nama: true,
-                                        kehadiran: {
-                                            select: {
-                                                tanggal: true,
-                                                status: true
-                                            }
-                                        }
+                                        nama: true
                                     }
                                 }
                             }
@@ -37,25 +37,26 @@ export async function GET(request, { params }) {
                     }
                 })
 
-                if (roster) {
+                if (tugas && tugas.status_tugas.length > 0) {
                     output.error = false
                     output.message = "Berhasil mengambil data"
-                    output.data = {
-                        total: roster.class.siswa[0].kehadiran.length,
-                        siswa: roster.class.siswa.map(i => ({
-                            nama: i.nama,
-                            kehadiran: i.kehadiran
-                        }))
-                    }
+                    output.data = tugas.status_tugas.map(i => ({
+                        id: i.id,
+                        nama: i.student.nama,
+                        tanggal: i.tanggal,
+                        berkas: i.berkas,
+                        status: i.status,
+                        nilai: i.nilai
+                    })).sort((a, b) => a.nama.localeCompare(b.nama))
                 } else {
-                    output.message = "Kami tidak menemukan data kehadiran siswa"
+                    output.message = "Tidak menemukan tugas Anda"
                 }
             }
         } else {
             return Response.json(auth)
         }
     } catch (error) {
-        console.error(error.message)
+        console.log(error)
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

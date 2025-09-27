@@ -1,7 +1,5 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth } from "../auth/auth.js"
-import { utcToZonedTime } from "date-fns-tz"
-import { startOfDay, endOfDay } from "date-fns"
+import { CheckAuth } from "../../utils.js"
 
 export async function GET(request) {
     const output = {
@@ -13,9 +11,9 @@ export async function GET(request) {
         const auth = CheckAuth(request)
 
         if (!auth.error) {
-            const timeZone = "Asia/Jakarta"
-            const start = new Date(formatInTimeZone(new Date(), timeZone, "yyyy-MM-dd'T'00:00:00XXX"))
-            const end = new Date(formatInTimeZone(new Date(), timeZone, "yyyy-MM-dd'T'23:59:59.999XXX"))
+            const start = new Date()
+            const end = new Date(start)
+            start.setDate(start.getDate() - 1)
 
             const kelas = await prisma.kelas.findUnique({
                 where: {
@@ -45,6 +43,15 @@ export async function GET(request) {
                                             nama: true
                                         }
                                     }
+                                }
+                            },
+                            status_tugas: {
+                                where: {
+                                    siswa: auth.message.id
+                                },
+                                select: {
+                                    nilai: true,
+                                    status: true
                                 }
                             }
                         }
@@ -90,6 +97,8 @@ export async function GET(request) {
                             batas_waktu: i.batas_waktu,
                             berkas: i.dokumen_tugas,
                             jenis: i.jenis,
+                            status: i.status_tugas[0].status,
+                            nilai: i.status_tugas[0].nilai,
                             guru: i.teacher.nama,
                             pelajaran: i.teacher.lesson.nama
                         })),

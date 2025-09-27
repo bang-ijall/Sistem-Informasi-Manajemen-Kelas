@@ -1,6 +1,5 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth } from "../auth/auth.js"
-import { select } from "@nextui-org/react"
+import { CheckAuth } from "../../utils.js"
 
 export async function GET(request) {
     const output = {

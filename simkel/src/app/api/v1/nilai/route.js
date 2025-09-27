@@ -1,10 +1,9 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth } from "../auth/auth.js"
+import { CheckAuth } from "../../utils.js"
 import { select } from "@nextui-org/react";
-
 const hari = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
-export async function GET(request, { params }) {
+export async function GET(request) {
     const output = {
         error: true,
         message: "Server kami menolak permintaan dari anda!"
@@ -14,93 +13,116 @@ export async function GET(request, { params }) {
         const auth = CheckAuth(request)
 
         if (!auth.error) {
-            let roster = null
-
-            if (auth.message.role == "guru") {
-                const { id } = await params
-
-                const tugas = await prisma.tugas.findUnique({
+            if (auth.message.role != "guru") {
+                const status = await prisma.status_tugas.findMany({
                     where: {
-                        id: id,
-                        guru: auth.message.id,
+                        siswa: auth.message.id,
+                        status: "dinilai"
                     },
                     select: {
-                        judul: true,
-                        deskripsi: true,
-                        batas_waktu: true,
-                        dokumen_tugas: true,
-                        jenis: true,
+                        nilai: true,
+                        berkas: true,
                         tanggal: true,
-                        status: {
+                        task: {
                             select: {
-                                id: true,
-                                status: true,
-                                berkas: true,
-                                tanggal: true,
-                                nilai: true,
-                                student: {
-                                    select: {
-                                        nama: true
-                                    }
-                                }
+                                judul: true,
+                                deskripsi: true,
+                                batas_waktu: true,
+                                dokumen_tugas: true,
+                                jenis: true,
+                                tanggal: true
                             }
                         }
                     }
                 })
 
-                if (tugas) {
+                if (status) {
                     output.error = false
                     output.message = "Berhasil mengambil data"
-                    output.data = {
-                        
-                    }
-                    } else {
-                        output.data = roster.map(i => ({
-                            hari: i.hari,
-                            jam_mulai: i.jam_mulai,
-                            jam_selesai: i.jam_selesai,
-                            kelas: i.class.nama
-                        }))
-                    }
+                    output.data = status.map(i => ({
+                        judul: i.task.judul,
+                        deskripsi: i.task.deskripsi,
+                        batas_waktu: i.task.batas_waktu,
+                        dokumen_tugas: i.task.dokumen_tugas,
+                        jenis: i.task.jenis,
+                        tanggal_tugas: i.task.tanggal,
+                        berkas: i.berkas,
+                        tanggal: i.tanggal,
+                        nilai: i.nilai
+                    }))
                 }
             } else {
+                const tugas = await prisma.tugas.findMany({
+                    where: {
+                        guru: auth.message.id,
+                    },
+                    select: {
+                        id: true,
+                        judul: true,
+                        deskripsi: true,
+                        batas_waktu: true,
+                        dokumen_tugas: true,
+                        jenis: true,
+                        tanggal: true
+                    }
+                })
 
-            }
-
-            if (roster.length > 0) {
-                roster.sort((a, b) => {
-                    const orderA = hari.indexOf(a.hari) !== -1 ? hari.indexOf(a.hari) : 99;
-                    const orderB = hari.indexOf(b.hari) !== -1 ? hari.indexOf(b.hari) : 99;
-                    if (orderA !== orderB) return orderA - orderB;
-
-                    const timeA = a.jam_mulai.split(":").map(Number);
-                    const timeB = b.jam_mulai.split(":").map(Number);
-                    const minutesA = timeA[0] * 60 + timeA[1];
-                    const minutesB = timeB[0] * 60 + timeB[1];
-                    return minutesA - minutesB;
-                });
-
-                output.error = false
-                output.message = "Berhasil mengambil data"
-
-                if (auth.message.role != "guru") {
-                    output.data = roster.map(i => ({
-                        hari: i.hari,
-                        jam_mulai: i.jam_mulai,
-                        jam_selesai: i.jam_selesai,
-                        guru: i.teacher.nama,
-                        pelajaran: i.teacher.lesson.nama
-                    }))
+                if (tugas.length > 0) {
+                    output.error = false
+                    output.message = "Berhasil mengambil data"
+                    output.data = tugas.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
                 } else {
-                    output.data = roster.map(i => ({
-                        hari: i.hari,
-                        jam_mulai: i.jam_mulai,
-                        jam_selesai: i.jam_selesai,
-                        kelas: i.class.nama
-                    }))
+                    output.message = "Tidak menemukan tugas Anda"
                 }
-            } else {
-                output.message = "Tidak menemukan jadwal pelajaran anda"
+            }
+        } else {
+            return Response.json(auth)
+        }
+    } catch (error) {
+        console.log(error)
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+    }
+
+    return Response.json(output)
+}
+
+export async function POST(request) {
+    const output = {
+        error: true,
+        message: "Server kami menolak permintaan dari anda!"
+    }
+
+    try {
+        const auth = CheckAuth(request)
+
+        if (!auth.error) {
+            if (auth.message.role == "guru") {
+                const body = await request.formData()
+                const id = parseInt(body.get("id"))
+                const tugas = parseInt(body.get("tugas"))
+                const nilai = parseFloat(body.get("nilai"))
+
+                const status = await prisma.status_tugas.updateMany({
+                    where: {
+                        id: id,
+                        tugas: tugas,
+                        status: "sudah",
+                        task: {
+                            guru: auth.message.id
+                        }
+                    },
+                    data: {
+                        nilai: nilai,
+                        status: "dinilai"
+                    }
+                })
+
+                if (status.count == 1) {
+                    output.error = false
+                    output.message = "Berhasil memperbarui data"
+                } else {
+                    output.message = "Gagal memperbarui data"
+                }
             }
         } else {
             return Response.json(auth)

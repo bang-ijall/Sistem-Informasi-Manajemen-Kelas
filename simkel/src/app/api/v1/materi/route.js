@@ -1,6 +1,5 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth } from "../auth/auth.js"
-import { select } from "@nextui-org/react"
+import { CheckAuth } from "../../utils.js"
 
 export async function GET(request) {
     const output = {
@@ -81,6 +80,43 @@ export async function GET(request) {
             output.error = false
             output.message = "Berhasil mengambil data"
 
+        } else {
+            return Response.json(auth)
+        }
+    } catch (error) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+    }
+
+    return Response.json(output)
+}
+
+export async function POST(request) {
+    const output = {
+        error: true,
+        message: "Server kami menolak permintaan dari anda!"
+    }
+
+    try {
+        const auth = CheckAuth(request)
+
+        if (!auth.error) {
+            if (auth.message.role == "guru") {
+                const body = await req.json()
+                const { judul, deskripsi, modul, kelas } = body
+
+                await prisma.materi.create({
+                    data: {
+                        judul: judul,
+                        deskripsi: deskripsi,
+                        modul: modul,
+                        kelas: kelas,
+                        guru: auth.message.id
+                    }
+                })
+
+                output.error = false
+                output.message = "Berhasil mengirim materi"
+            }
         } else {
             return Response.json(auth)
         }
