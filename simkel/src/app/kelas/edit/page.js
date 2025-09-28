@@ -1,9 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 
-export default function TambahKelas() {
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Component />
+    </Suspense>
+  );
+}
+
+function Component() {
   const router = useRouter();
   const params = useSearchParams();
   const kode = params.get("kode");

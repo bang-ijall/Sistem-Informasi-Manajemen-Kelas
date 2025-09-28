@@ -1,7 +1,5 @@
 import prisma from "@/libs/prisma"
 import { CheckAuth } from "../../utils.js"
-import { select } from "@nextui-org/react";
-const hari = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
 export async function GET(request) {
     const output = {
@@ -79,7 +77,6 @@ export async function GET(request) {
             return Response.json(auth)
         }
     } catch (error) {
-        console.log(error)
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
