@@ -1,72 +1,114 @@
-import prisma from "@/libs/prisma";
+import { CheckAuth } from "@/app/api/utils"
+import prisma from "@/libs/prisma"
 
 const output = {
-  error: true,
-  message: "Fetch failed",
-};
-
-export async function GET(request, { params }) {
-  var { id } = await params;
-  id = parseInt(id, 10)
-
-  try {
-    const roster = await prisma.roster.findUnique({
-      where: { id: id },
-    });
-
-    if (roster) {
-      output.error = false
-      output.message = "Fetch success"
-      output.data = roster
-    } else {
-      output.message = "Fetch refused for some reason"
-    }
-  } catch (error) {
-    output.message = error.message;
-  }
-
-  return Response.json(output)
+    error: true,
+    message: "Fetch failed"
 }
 
 export async function PATCH(request, { params }) {
-  try {
-    var { id } = await params;
-    id = parseInt(id, 10)
-    const body = await request.json();
+    try {
+        const auth = CheckAuth(request)
 
-    const roster = await prisma.roster.update({
-      where: { id: id },
-      data: body,
-    });
+        if (!auth.error && auth.message.role == "admin") {
+            var { id } = await params
 
-    if (roster) {
-      output.error = false
-      output.message = "Fetch success"
-      output.data = roster
-    } else {
-      output.message = "Fetch refused for some reason"
+            id = Number(id)
+            const body = await request.formData()
+            const hari = body.get("hari")
+            const kelas = body.get("kelas")
+            const jamMulai = body.get("jam_mulai")
+            const jamSelesai = body.get("jam_selesai")
+
+            const roster = await prisma.roster.findFirst({
+                where: {
+                    hari: hari,
+                    class: {
+                        kode: kelas
+                    },
+                    AND: [{
+                        jam_mulai: {
+                            lt: jamSelesai
+                        }
+                    }, {
+                        jam_selesai: {
+                            gt: jamMulai
+                        }
+                    }]
+                },
+                select: {
+                    teacher: {
+                        select: {
+                            nama: true,
+                            lesson: {
+                                select: {
+                                    nama: true
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+
+            if (!roster) {
+                await prisma.roster.update({
+                    where: {
+                        id: id
+                    },
+                    data: {
+                        hari: body.get("hari"),
+                        jam_mulai: body.get("jam_mulai"),
+                        jam_selesai: body.get("jam_selesai"),
+                        class: {
+                            connect: {
+                                kode: body.get("kelas")
+                            }
+                        },
+                        teacher: {
+                            connect: {
+                                nip: body.get("pelajaran")
+                            }
+                        }
+                    }
+                })
+
+                output.error = false
+                output.message = "Berhasil memperbarui data"
+            } else {
+                output.message = `Gagal memperbarui roster akibat bentrok dengan pelajaran ${roster.teacher.lesson.nama} - ${roster.teacher.nama}`
+            }
+        } else {
+            output.message = auth.message
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
-  } catch (error) {
-    output.message = error.message;
-  }
 
-  return Response.json(output)
+    return Response.json(output)
 }
 
-export async function DELETE(request, { params }) {
-  var { id } = await params;
-  id = parseInt(id, 10)
+export async function DELETE(_, { params }) {
+    var { id } = await params
+    id = Number(id)
 
-  try {
-    await prisma.roster.delete({
-      where: { id: id },
-    });
+    try {
+        const auth = CheckAuth(request)
 
-    output.error = false
-    output.message = "Fetch success"
-  } catch (error) {
-    output.message = error.message;
-  }
+        if (!auth.error && auth.message.role == "admin") {
+            await prisma.roster.delete({
+                where: {
+                    id: id
+                }
+            })
 
-  return Response.json(output)
+            output.error = false
+            output.message = "Berhasil menghapus data"
+        } else {
+            output.message = auth.message
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+    }
+
+    return Response.json(output)
 }

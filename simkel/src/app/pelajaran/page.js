@@ -1,143 +1,331 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Swal from "sweetalert2";
+"use client"
 
-export default function PelajaranPage() {
-  const router = useRouter();
-  const [pelajaran, setPelajaran] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [message, setMessage] = useState("")
+import React, { useEffect, useState } from "react"
+import Swal from "sweetalert2"
 
-  const fetchPelajaran = async () => {
-    try {
-      const res = await fetch("/api/v1/admin/pelajaran", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) throw new Error("Failed to fetch pelajaran");
-      const data = await res.json();
+import PageHeader from "@/components/PageHeader"
+import Modal from "@/components/Modal"
+import DataTable from "@/components/DataTable"
+import LoadingModal from "@/components/LoadingModal"
 
-      if (data.error) {
-        setMessage(data.message);
-      } else {
-        setPelajaran(data.data.map(({ id, ...rest }) => ({ ...rest })));
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+function Form({ data, onSubmit, onClose }) {
+    const required = ["kode", "nama", "kategori"]
 
-  useEffect(() => {
-    fetchPelajaran();
-  }, []);
+    const [form, setForm] = useState({
+        kode: "",
+        nama: "",
+        kategori: ""
+    })
 
-  const columns = pelajaran.length > 0 ? Object.keys(pelajaran[0]) : [];
-
-  const handleDelete = async (kode) => {
-    Swal.fire({
-      title: "Info!",
-      text: "Data yang sudah dihapus tidak bisa dikembalikan. Yakin ingin menghapus?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Ya, hapus!",
-      cancelButtonText: "Batal"
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          const res = await fetch(`/api/v1/admin/pelajaran/${kode}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-          });
-
-          const result = await res.json();
-
-          if (!result.error) {
-            Swal.fire("Berhasil!", "Data berhasil dihapus.", "success")
-              .then(() => window.location.reload());
-          } else {
-            Swal.fire("Gagal!", result.message, "error");
-          }
-        } catch (err) {
-          console.log(err);
-          Swal.fire("Error!", "Terjadi kesalahan tak terduga", "error");
+    useEffect(() => {
+        if (data != null) {
+            setForm({
+                kode: data.kode,
+                nama: data.nama,
+                kategori: data.kategori
+            })
         }
-      }
-    });
-  };
+    }, [data])
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold text-gray-800">Pelajaran</h2>
-        <button
-          onClick={() => router.push("/pelajaran/edit")}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"
+    const handleChange = (key, value) => {
+        setForm((prev) => ({ ...prev, [key]: value }))
+    }
+
+    const handleSubmit = (e) => {
+        e.preventDefault()
+
+        const missing = required.filter((field) => {
+            return !form[field]
+        })
+
+        if (missing.length > 0) {
+            Swal.fire({
+                title: "Data Belum Lengkap",
+                text: `Wajib mengisi: ${missing.join(", ")}`,
+                icon: "warning",
+                confirmButtonText: "OK",
+            })
+
+            return
+        }
+
+        onSubmit(form)
+    }
+
+    return (
+        <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[80vh] overflow-y-auto p-1"
         >
-          + Tambah
-        </button>
-      </div>
+            {Object.keys(form).map((field) => {
+                const isRequired = required.includes(field);
 
-      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {columns.map((col) => (
-                <th
-                  key={col}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                return (
+                    <div key={field} className="flex flex-col">
+                        <label className="block mb-1 text-sm font-medium capitalize">
+                            {field.replace(/_/g, " ")}
+                            {isRequired && <span className="ml-1 text-red-500">*</span>}
+                        </label>
+
+                        <input
+                            type="text"
+                            name={field}
+                            value={form[field] ?? ""}
+                            onChange={(e) => handleChange(field, e.target.value)}
+                            required={isRequired}
+                            className="w-full px-3 py-2 text-sm border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700"
+                        />
+                    </div>
+                );
+            })}
+
+            <div className="flex justify-end pt-3 space-x-2 col-span-full">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 text-black bg-gray-200 rounded hover:bg-gray-300"
                 >
-                  {col.replace("_", " ").toUpperCase()}
-                </th>
-              ))}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {loading && (
-              <tr>
-                <td colSpan={columns.length + 1} className="px-6 py-4 text-center text-gray-500">
-                  Loading...
-                </td>
-              </tr>
-            )}
-            {error && !loading && (
-              <tr>
-                <td colSpan={columns.length + 1} className="px-6 py-4 text-center text-red-500">
-                  Error: {error}
-                </td>
-              </tr>
-            )}
-            {!loading && !error && message != "" && (
-              <tr>
-                <td colSpan={columns.length + 1} className="px-6 py-4 text-center text-gray-500">
-                  {message}
-                </td>
-              </tr>
-            )}
-            {!loading && !error && pelajaran.map((s) => (
-              <tr key={s.kode}>
-                {columns.map((col) => (
-                  <td key={col} className="px-6 py-4">{s[col]}</td>
-                ))}
-                <td className="px-6 py-4 space-x-2">
-                  <button
-                    onClick={() => router.push(`/pelajaran/edit?kode=${s.kode}`)}
-                    className="px-3 py-1 bg-yellow-400 text-white rounded">Edit
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(s.kode)}
-                    className="px-3 py-1 bg-red-500 text-white rounded">Hapus
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+                    Batal
+                </button>
+                <button
+                    type="submit"
+                    className="px-4 py-2 text-white bg-indigo-600 rounded hover:bg-indigo-700"
+                >
+                    Simpan
+                </button>
+            </div>
+        </form>
+    )
+}
+
+export default function Page() {
+    const [pelajaran, setPelajaran] = useState([])
+    const [field, setField] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [openPopup, setOpenPopup] = useState(false)
+    const [edit, setEdit] = useState(null)
+    const [posting, setPosting] = useState(false)
+
+    const fetchAPI = async (token) => {
+        setLoading(true)
+        var message = ""
+
+        try {
+            const res = await fetch("/api/v1/admin/pelajaran", {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+
+            const body = await res.json()
+            message = body.message
+
+            if (!body.error) {
+                setPelajaran(body.data)
+
+                if (body.data.length > 0) {
+                    setField(Object.keys(body.data[0]))
+                }
+
+                setLoading(false)
+                return
+            }
+        } catch (_) {
+            message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+        }
+
+        if (message == "Unauthorized") {
+            window.location.href = "/login"
+            return
+        }
+
+        setLoading(false)
+        Swal.fire({
+            title: "Error!",
+            text: message,
+            icon: "error",
+            confirmButtonText: "OK",
+        }).then(() => {
+            window.location.reload()
+        })
+    }
+
+    useEffect(() => {
+        const token = localStorage.getItem("token")
+
+        if (token) {
+            fetchAPI(token)
+        } else {
+            window.location.href = "/login"
+        }
+    }, [])
+
+    const handleSimpan = async (form) => {
+        setPosting(true)
+        const token = localStorage.getItem("token")
+
+        try {
+            const method = edit ? "PATCH" : "POST"
+            const data = new FormData()
+
+            Object.keys(form).forEach((key) => {
+                if (form[key] != undefined && form[key] != null) {
+                    data.append(key, form[key])
+                }
+            })
+
+            const res = await fetch(edit ? `/api/v1/admin/pelajaran/${edit.kode}` : "/api/v1/admin/pelajaran", {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                method: method,
+                body: data
+            })
+
+            const body = await res.json()
+
+            if (!body.error) {
+                Swal.fire({
+                    title: "Berhasil!",
+                    text: body.message,
+                    icon: "success",
+                    confirmButtonText: "OK",
+                })
+
+                fetchAPI(token)
+                setOpenPopup(false)
+                setEdit(null)
+            } else {
+                if (body.message == "Unauthorized") {
+                    window.location.href = "/login"
+                    return
+                }
+
+                Swal.fire({
+                    title: "Gagal!",
+                    text: body.message,
+                    icon: "error",
+                    confirmButtonText: "OK",
+                })
+            }
+        } catch (_) {
+            Swal.fire({
+                title: "Error!",
+                text: "Ada masalah pada server kami. Silahkan coba lagi nanti",
+                icon: "error",
+                confirmButtonText: "OK",
+            })
+        }
+
+        setPosting(false)
+    }
+
+    const handleHapus = async (pelajaran) => {
+        Swal.fire({
+            title: "Peringatan!",
+            text: `Data yang sudah dihapus tidak bisa dikembalikan. Yakin ingin menghapus ${pelajaran.nama}?`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Ya",
+            cancelButtonText: "Batal"
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                setPosting(true)
+                const token = localStorage.getItem("token")
+
+                try {
+                    const res = await fetch(`/api/v1/admin/pelajaran/${pelajaran.kode}`, {
+                        header: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        method: "DELETE"
+                    })
+
+                    const body = await res.json()
+
+                    if (!body.error) {
+                        Swal.fire({
+                            title: "Berhasil!",
+                            text: body.message,
+                            icon: "success",
+                            confirmButtonText: "OK",
+                        })
+
+                        fetchAPI(token)
+                    } else {
+                        if (body.message == "Unauthorized") {
+                            window.location.href = "/login"
+                            return
+                        }
+
+                        Swal.fire({
+                            title: "Gagal!",
+                            text: body.message,
+                            icon: "error",
+                            confirmButtonText: "OK",
+                        })
+                    }
+                } catch (_) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "Ada masalah pada server kami. Silahkan coba lagi nanti",
+                        icon: "error",
+                        confirmButtonText: "OK",
+                    })
+                }
+
+                setPosting(false)
+            }
+        })
+    }
+
+    const columns = field.map((f) => {
+        return {
+            header: f.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            accessor: f,
+        }
+    })
+
+    return (
+        <>
+            <PageHeader
+                title="Pelajaran"
+                description="Kelola data pelajaran"
+                actionButtonText="Tambah Pelajaran"
+                onActionButtonClick={() => setOpenPopup(true)}
+            />
+
+            <DataTable
+                columns={columns}
+                data={pelajaran}
+                onEdit={(item) => {
+                    setEdit(item)
+                    setOpenPopup(true)
+                }}
+                onDelete={handleHapus}
+            />
+
+            <Modal
+                isOpen={openPopup}
+                onClose={() => {
+                    setOpenPopup(false)
+                    setEdit(null)
+                }}
+                title={edit ? "Edit Pelajaran" : "Tambah Pelajaran"}
+            >
+                <Form
+                    fields={field}
+                    data={edit}
+                    onSubmit={handleSimpan}
+                    onClose={() => {
+                        setOpenPopup(false)
+                        setEdit(null)
+                    }}
+                />
+            </Modal>
+
+            <LoadingModal isOpen={loading} text="Sedang memuat data..." />
+            <LoadingModal isOpen={posting} text="Sedang mengirim..." />
+        </>
+    )
 }

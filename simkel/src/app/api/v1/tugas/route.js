@@ -11,8 +11,6 @@ export async function GET(request) {
         const auth = CheckAuth(request)
 
         if (!auth.error) {
-            const url = process.env.NEXT_PUBLIC_API_URL;
-
             const status = await prisma.status_tugas.findMany({
                 where: {
                     siswa: auth.message.id

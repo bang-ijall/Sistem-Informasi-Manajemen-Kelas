@@ -1,159 +1,166 @@
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgres"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+    provider  = "postgres"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
 }
 
 enum role {
-  siswa
-  guru
-  wali_siswa
+    siswa
+    guru
+    wali_siswa
 }
 
 enum hadir {
-  no_hadir
-  hadir
-  izin
+    no_hadir
+    hadir
+    izin
 }
 
 enum task {
-  kuis
-  submission
+    kuis
+    submission
 }
 
 enum task_status {
-  belum
-  sudah
-  dinilai
+    belum
+    sudah
+    dinilai
 }
 
 model roster {
-  id          Int    @id @default(autoincrement())
-  hari        String
-  jam_mulai   String
-  jam_selesai String
-  kelas       String
-  class       kelas  @relation(fields: [kelas], references: [kode])
-  guru        String
-  teacher     guru   @relation(fields: [guru], references: [nip])
+    id          Int    @id @default(autoincrement())
+    hari        String
+    jam_mulai   String
+    jam_selesai String
+    kelas       String
+    class       kelas  @relation(fields: [kelas], references: [kode])
+    guru        String
+    teacher     guru   @relation(fields: [guru], references: [nip])
 
-  kehadiran kehadiran[]
+    kehadiran kehadiran[]
 }
 
 model siswa {
-  id          Int    @id @default(autoincrement())
-  nisn        String @unique
-  nama        String
-  hp          String @unique
-  tahun_masuk String
-  kelas       String
-  class       kelas  @relation(fields: [kelas], references: [kode])
-  nama_wali   String
-  hp_wali     String @unique
-  user        user   @relation(fields: [nisn], references: [id])
+    id          Int    @id @default(autoincrement())
+    nisn        String @unique
+    nama        String
+    hp          String @unique
+    tahun_masuk String
+    kelas       String
+    class       kelas  @relation(fields: [kelas], references: [kode])
+    nama_wali   String
+    hp_wali     String @unique
+    user        user   @relation(fields: [nisn], references: [id])
 
-  kehadiran    kehadiran[]
-  status_tugas status_tugas[]
+    kehadiran    kehadiran[]
+    status_tugas status_tugas[]
 }
 
 model guru {
-  id        Int       @id @default(autoincrement())
-  nip       String    @unique
-  nama      String
-  hp        String    @unique
-  kelas     String?   @unique
-  class     kelas?    @relation(fields: [kelas], references: [kode])
-  pelajaran String
-  lesson    pelajaran @relation(fields: [pelajaran], references: [kode])
-  user      user      @relation(fields: [nip], references: [id])
+    id        Int       @id @default(autoincrement())
+    nip       String    @unique
+    nama      String
+    hp        String    @unique
+    kelas     String?   @unique
+    class     kelas?    @relation(fields: [kelas], references: [kode])
+    pelajaran String
+    lesson    pelajaran @relation(fields: [pelajaran], references: [kode])
+    user      user      @relation(fields: [nip], references: [id])
 
-  roster roster[]
-  tugas  tugas[]
-  materi materi[]
+    roster roster[]
+    tugas  tugas[]
+    materi materi[]
 }
 
 model pelajaran {
-  kode     String @id
-  nama     String
-  kategori String
+    kode     String @id
+    nama     String
+    kategori String
 
-  guru guru[]
+    guru guru[]
 }
 
 model kelas {
-  kode String @id
-  nama String @unique
+    kode String @id
+    nama String @unique
 
-  siswa  siswa[]
-  guru   guru[]
-  roster roster[]
-  tugas  tugas[]
-  materi materi[]
+    siswa  siswa[]
+    guru   guru?
+    roster roster[]
+    tugas  tugas[]
+    materi materi[]
 }
 
 model user {
-  id           String @id
-  password     String
-  old_password String
+    id           String  @id
+    password     String
+    old_password String
+    foto         String?
+    role         role
 
-  foto  String?
-  role  role
-  siswa siswa?
-  guru  guru?
+    siswa siswa?
+    guru  guru?
 }
 
 model kehadiran {
-  id      Int      @id @default(autoincrement())
-  tanggal DateTime
-  status  hadir
-  siswa   String
-  student siswa    @relation(fields: [siswa], references: [nisn])
-  roster  Int
-  roster_ roster   @relation(fields: [roster], references: [id])
+    id      Int      @id @default(autoincrement())
+    tanggal DateTime
+    status  hadir
+    siswa   String
+    student siswa    @relation(fields: [siswa], references: [nisn])
+    roster  Int
+    roster_ roster   @relation(fields: [roster], references: [id])
 }
 
 model tugas {
-  id            Int      @id @default(autoincrement())
-  judul         String
-  deskripsi     String?
-  batas_waktu   DateTime
-  jenis         task
-  waktu_kuis    Int?
-  soal_kuis     Json?
-  dokumen_tugas String[]
-  tanggal       DateTime
-  kelas         String
-  class         kelas    @relation(fields: [kelas], references: [kode])
-  guru          String
-  teacher       guru     @relation(fields: [guru], references: [nip])
+    id            Int      @id @default(autoincrement())
+    judul         String
+    deskripsi     String?
+    batas_waktu   DateTime
+    jenis         task
+    waktu_kuis    Int?
+    soal_kuis     Json?
+    dokumen_tugas String[]
+    tanggal       DateTime
+    kelas         String
+    class         kelas    @relation(fields: [kelas], references: [kode])
+    guru          String
+    teacher       guru     @relation(fields: [guru], references: [nip])
 
-  status_tugas status_tugas[]
+    status_tugas status_tugas[]
 }
 
 model status_tugas {
-  id      Int         @id @default(autoincrement())
-  siswa   String
-  student siswa       @relation(fields: [siswa], references: [nisn])
-  tugas   Int
-  task    tugas       @relation(fields: [tugas], references: [id])
-  status  task_status
-  berkas  String[]
-  tanggal DateTime?
-  nilai   Float?
+    id      Int         @id @default(autoincrement())
+    siswa   String
+    student siswa       @relation(fields: [siswa], references: [nisn])
+    tugas   Int
+    task    tugas       @relation(fields: [tugas], references: [id])
+    status  task_status
+    berkas  String[]
+    tanggal DateTime?
+    nilai   Float?
 }
 
 model materi {
-  id        Int      @id @default(autoincrement())
-  judul     String
-  deskripsi String?
-  modul     String[]
-  tanggal   DateTime
-  kelas     String
-  class     kelas    @relation(fields: [kelas], references: [kode])
-  guru      String
-  teacher   guru     @relation(fields: [guru], references: [nip])
+    id        Int      @id @default(autoincrement())
+    judul     String
+    deskripsi String?
+    modul     String[]
+    tanggal   DateTime
+    kelas     String
+    class     kelas    @relation(fields: [kelas], references: [kode])
+    guru      String
+    teacher   guru     @relation(fields: [guru], references: [nip])
+}
+
+model admin {
+    email    String  @id
+    nama     String
+    password String
+    foto     String?
 }

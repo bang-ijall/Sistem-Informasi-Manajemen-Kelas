@@ -1,70 +1,65 @@
 import prisma from "@/libs/prisma"
-import { select } from "@nextui-org/react";
+import bcrypt from "bcryptjs"
+import fs from "fs"
+import path from "path"
+import { CheckAuth, getPassword } from "@/app/api/utils"
 
 const output = {
     error: true,
     message: "Fetch failed"
 }
 
-export async function GET() {
+export async function GET(request) {
     try {
-        const guru = await prisma.guru.findMany({
-            select: {
-                id: true,
-                nip: true,
-                nama: true,
-                hp: true,
-                class: {
-                    select: {
-                        nama: true
-                    }
+        const auth = CheckAuth(request)
+
+        if (!auth.error && auth.message.role == "admin") {
+            const guru = await prisma.user.findMany({
+                where: {
+                    role: "guru"
                 },
-                lesson: {
-                    select: {
-                        nama: true
+                select: {
+                    id: true,
+                    foto: true,
+                    guru: {
+                        select: {
+                            nama: true,
+                            hp: true,
+                            class: {
+                                select: {
+                                    kode: true,
+                                    nama: true
+                                }
+                            },
+                            lesson: {
+                                select: {
+                                    kode: true,
+                                    nama: true
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        })
-
-        if (guru.length > 0) {
-            // guru = await Promise.all(
-            //     guru.map(async (s, idx) => {
-            //         if (s.kelas != null) {
-            //             const kelas = await prisma.kelas.findUnique({
-            //                 where: { kode: s.kelas },
-            //             });
-
-            //             const pelajaran = await prisma.pelajaran.findUnique({
-            //                 where: { kode: s.pelajaran }
-            //             })
-
-            //             const { ...rest } = s;
-            //             return {
-            //                 no: idx + 1,
-            //                 ...rest,
-            //                 kelas: kelas.nama,
-            //                 pelajaran: pelajaran.nama
-            //             };
-            //         }
-            //     })
-            // );
+            })
 
             output.error = false
-            output.message = "Fetch success"
+            output.message = "Berhasil mengambil data"
+
             output.data = guru.map(i => ({
-                id: i.id,
-                nip: i.nip,
-                nama: i.nama,
-                hp: i.hp,
-                kelas: i.class ? i.class.nama : null,
-                pelajaran: i.lesson.nama
+                nip: i.id,
+                nama: i.guru.nama,
+                foto: i.foto,
+                hp: i.guru.hp,
+                kelas: i.guru.class ? i.guru.class.nama : null,
+                class: i.guru.class ? i.guru.class.kode : null,
+                pelajaran: i.guru.lesson.nama,
+                lesson: i.guru.lesson.kode
             }))
         } else {
-            output.message = "Data guru kosong"
+            output.message = auth.message
         }
-    } catch (error) {
-        output.message = error.message
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
     return Response.json(output)
@@ -72,17 +67,64 @@ export async function GET() {
 
 export async function POST(request) {
     try {
-        const body = await request.json()
+        const auth = CheckAuth(request)
 
-        const guru = await prisma.guru.create({
-            data: body
-        })
+        if (!auth.error && auth.message.role == "admin") {
+            const body = await request.formData()
+            const nip = body.get("nip")
+            const nama = body.get("nama")
+            const password = await bcrypt.hash(getPassword(nip), 12)
+            const foto_type = body.get("foto_type")
+            var foto = body.get("foto")
 
-        output.error = false
-        output.message = "Fetch success"
-        output.data = guru
-    } catch (error) {
-        output.message = error.message;
+            if (foto_type == "file" && foto && foto.size > 0) {
+                const buffer = Buffer.from(await foto.arrayBuffer())
+                const folder = path.join(process.cwd(), "public", "guru", `${nama}_${nip}`)
+
+                if (!fs.existsSync(folder)) {
+                    fs.mkdirSync(folder, { recursive: true })
+                }
+
+                const file = path.join(folder, "profile.png")
+                fs.writeFileSync(file, buffer)
+                foto = `${process.env.NEXT_PUBLIC_BASE_URL}/guru/${nama}_${nip}/profile.png`
+            }
+
+            await prisma.user.create({
+                data: {
+                    id: nip,
+                    password: password,
+                    old_password: password,
+                    foto: foto,
+                    role: "guru",
+                    guru: {
+                        create: {
+                            nama: nama,
+                            hp: body.get("hp"),
+                            ...(body.get("kelas") && {
+                                class: {
+                                    connect: {
+                                        kode: body.get("kelas"),
+                                    },
+                                },
+                            }),
+                            lesson: {
+                                connect: {
+                                    kode: body.get("pelajaran")
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+
+            output.error = false
+            output.message = "Berhasil menambahkan data"
+        } else {
+            output.message = auth.message
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
     return Response.json(output)

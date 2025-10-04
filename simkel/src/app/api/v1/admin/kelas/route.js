@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs"
+import { CheckAuth } from "@/app/api/utils"
 import prisma from "@/libs/prisma"
 
 const output = {
@@ -6,24 +6,27 @@ const output = {
     message: "Fetch failed"
 }
 
-export async function GET() {
+export async function GET(request) {
     try {
-        var kelas = await prisma.kelas.findMany()
+        const auth = CheckAuth(request)
 
-        if (kelas && kelas.length > 0) {
-            kelas = kelas.map((k, idx) => ({
-                no: idx + 1,
-                ...k,
-            }));
+        if (!auth.error && auth.message.role == "admin") {
+            const kelas = await prisma.kelas.findMany({
+                select: {
+                    kode: true,
+                    nama: true,
+                    guru: true
+                }
+            })
 
             output.error = false
-            output.message = "Fetch success"
+            output.message = "Berhasil mengambil data"
             output.data = kelas
         } else {
-            output.message = "Data kelas kosong"
+            output.message = auth.message
         }
-    } catch (error) {
-        output.message = error.message
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
     return Response.json(output)
@@ -31,18 +34,25 @@ export async function GET() {
 
 export async function POST(request) {
     try {
-        const body = await request.json();
+        const auth = CheckAuth(request)
 
-        const kelas = await prisma.kelas.create({
-            data: body
-        });
+        if (!auth.error && auth.message.role == "admin") {
+            const body = await request.formData()
 
-        output.error = false
-        output.message = "Fetch success"
-        output.data = kelas
-    } catch (error) {
-        console.log(error)
-        output.message = error.message;
+            await prisma.kelas.create({
+                data: {
+                    kode: body.get("kode"),
+                    nama: body.get("nama")
+                }
+            })
+
+            output.error = false
+            output.message = "Berhasil menambahkan data"
+        } else {
+            output.message = auth.message
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
     return Response.json(output)

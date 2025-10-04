@@ -1,68 +1,61 @@
-import prisma from "@/libs/prisma";
+import { CheckAuth } from "@/app/api/utils"
+import prisma from "@/libs/prisma"
 
 const output = {
     error: true,
     message: "Fetch failed",
-};
-
-export async function GET(request, { params }) {
-    const { kode } = await params;
-
-    try {
-        const kelas = await prisma.kelas.findUnique({
-            where: { kode: kode },
-        });
-
-        if (kelas) {
-            output.error = false
-            output.message = "Fetch success"
-            output.data = kelas
-        } else {
-            output.message = "Fetch refused for some reason"
-        }
-    } catch (error) {
-        output.message = error.message;
-    }
-
-    return Response.json(output)
 }
 
 export async function PATCH(request, { params }) {
     try {
-        const { kode } = await params;
-        const body = await request.json();
+        const auth = CheckAuth(request)
 
-        const kelas = await prisma.kelas.update({
-            where: { kode: kode },
-            data: body,
-        });
+        if (!auth.error && auth.message.role == "admin") {
+            const { kode } = await params
+            const body = await request.formData()
 
-        if (kelas) {
+            await prisma.kelas.update({
+                where: {
+                    kode: kode
+                },
+                data: {
+                    kode: body.get("kode"),
+                    nama: body.get("nama")
+                }
+            })
+
             output.error = false
-            output.message = "Fetch success"
-            output.data = kelas
+            output.message = "Berhasil memperbarui data"
         } else {
-            output.message = "Fetch refused for some reason"
+            output.message = auth.message
         }
-    } catch (error) {
-        output.message = error.message;
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
     return Response.json(output)
 }
 
-export async function DELETE(request, { params }) {
-    const { kode } = await params;
+export async function DELETE(_, { params }) {
+    const { kode } = await params
 
     try {
-        const kelas = await prisma.kelas.delete({
-            where: { kode: kode },
-        });
+        const auth = CheckAuth(request)
 
-        output.error = false
-        output.message = "Fetch success"
-    } catch (error) {
-        output.message = error.message;
+        if (!auth.error && auth.message.role == "admin") {
+            await prisma.kelas.delete({
+                where: {
+                    kode: kode
+                }
+            })
+
+            output.error = false
+            output.message = "Berhasil menghapus data"
+        } else {
+            output.message = auth.message
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
     return Response.json(output)

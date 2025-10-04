@@ -1,106 +1,168 @@
-import prisma from "@/libs/prisma";
+import { CheckAuth } from "@/app/api/utils"
+import prisma from "@/libs/prisma"
 
-const hariUrut = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+const hariUrut = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 
 const output = {
-  error: true,
-  message: "Fetch failed"
-};
-
-function parseJam(jam) {
-  const [h, m] = jam.split(":").map(Number);
-  return h * 60 + m;
+    error: true,
+    message: "Fetch failed"
 }
 
-export async function GET() {
-  try {
-    let roster = await prisma.roster.findMany();
+function parseJam(jam) {
+    const [h, m] = jam.split(":").map(Number)
+    return h * 60 + m
+}
 
-    if (roster.length > 0) {
-      roster.sort((a, b) => {
-        const hariA = hariUrut.indexOf(a.hari || "");
-        const hariB = hariUrut.indexOf(b.hari || "");
+export async function GET(request) {
+    try {
+        const auth = CheckAuth(request)
 
-        if (hariA !== hariB) return hariA - hariB;
-
-        const kelasCompare = a.kelas.localeCompare(b.kelas);
-        if (kelasCompare !== 0) return kelasCompare;
-
-        return parseJam(a.jam_mulai) - parseJam(b.jam_mulai);
-      });
-
-      const counters = {};
-      roster = await Promise.all(
-        roster.map(async (s) => {
-          const kelas = await prisma.kelas.findUnique({
-            where: { kode: s.kelas },
-          });
-
-          const guru = await prisma.guru.findUnique({
-            where: { nip: s.guru },
-          });
-
-          const pelajaran = guru?.pelajaran
-            ? await prisma.pelajaran.findUnique({
-              where: { kode: guru.pelajaran },
+        if (!auth.error && auth.message.role == "admin") {
+            const roster = await prisma.roster.findMany({
+                select: {
+                    id: true,
+                    hari: true,
+                    jam_mulai: true,
+                    jam_selesai: true,
+                    class: {
+                        select: {
+                            kode: true,
+                            nama: true
+                        }
+                    },
+                    teacher: {
+                        select: {
+                            nip: true,
+                            nama: true,
+                            lesson: {
+                                select: {
+                                    kode: true,
+                                    nama: true
+                                }
+                            }
+                        }
+                    }
+                }
             })
-            : null;
 
-          if (!counters[s.kelas]) counters[s.kelas] = 1;
-          else counters[s.kelas]++;
+            roster.sort((a, b) => {
+                const hariA = hariUrut.indexOf(a.hari || "")
+                const hariB = hariUrut.indexOf(b.hari || "")
+                if (hariA !== hariB) return hariA - hariB
 
-          return {
-            no: counters[s.kelas],
-            id: s.id,
-            kelas: kelas?.nama || s.kelas,
-            guru: guru?.nama || s.guru,
-            pelajaran: pelajaran?.nama || null,
-            hari: s.hari,
-            jam_mulai: s.jam_mulai,
-            jam_selesai: s.jam_selesai,
-          };
-        })
-      );
+                const kelas = a.class.kode.localeCompare(b.class.kode)
+                if (kelas !== 0) return kelas
 
-      const group = roster.reduce((acc, item) => {
-        if (!acc[item.kelas]) acc[item.kelas] = [];
-        acc[item.kelas].push(item);
-        return acc;
-      }, {});
+                return parseJam(a.jam_mulai) - parseJam(b.jam_mulai)
+            })
 
-      output.error = false;
-      output.message = "Fetch success";
-      output.data = group;
-    } else {
-      output.message = "Data roster kosong";
+            const data = roster.reduce((data, i) => {
+                const kelas = i.class.nama
+
+                if (!data[kelas]) {
+                    data[kelas] = []
+                }
+
+                data[kelas].push({
+                    id: i.id,
+                    class: i.class.kode,
+                    kelas: i.class.nama,
+                    teacher: i.teacher.nip,
+                    guru: i.teacher.nama,
+                    pelajaran: i.teacher.lesson.nama,
+                    hari: i.hari,
+                    jam_mulai: i.jam_mulai,
+                    jam_selesai: i.jam_selesai
+                })
+
+                return data
+            }, {})
+
+
+            output.error = false
+            output.message = "Fetch success"
+            output.data = data
+        } else {
+            output.message = auth.message
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
-  } catch (error) {
-    output.message = error.message;
-  }
 
-  return Response.json(output);
+    return Response.json(output)
 }
 
 export async function POST(request) {
-  try {
-    const body = await request.json();
+    try {
+        const auth = CheckAuth(request)
 
-    const roster = await prisma.roster.create({
-      data: {
-        hari: body.hari,
-        jam_mulai: body.jam_mulai,
-        jam_selesai: body.jam_selesai,
-        kelas: body.kelas,
-        guru: body.guru,
-      },
-    });
+        if (!auth.error && auth.message.role == "admin") {
+            const body = await request.formData()
+            const hari = body.get("hari")
+            const kelas = body.get("kelas")
+            const jamMulai = body.get("jam_mulai")
+            const jamSelesai = body.get("jam_selesai")
 
-    output.error = false;
-    output.message = "Insert success";
-    output.data = roster;
-  } catch (error) {
-    output.message = error.message;
-  }
+            const roster = await prisma.roster.findFirst({
+                where: {
+                    hari: hari,
+                    class: {
+                        kode: kelas
+                    },
+                    AND: [{
+                        jam_mulai: {
+                            lt: jamSelesai
+                        }
+                    }, {
+                        jam_selesai: {
+                            gt: jamMulai
+                        }
+                    }]
+                },
+                select: {
+                    teacher: {
+                        select: {
+                            nama: true,
+                            lesson: {
+                                select: {
+                                    nama: true
+                                }
+                            }
+                        }
+                    }
+                }
+            })
 
-  return Response.json(output);
+            if (!roster) {
+                await prisma.roster.create({
+                    data: {
+                        hari: body.get("hari"),
+                        jam_mulai: body.get("jam_mulai"),
+                        jam_selesai: body.get("jam_selesai"),
+                        class: {
+                            connect: {
+                                kode: body.get("kelas")
+                            }
+                        },
+                        teacher: {
+                            connect: {
+                                nip: body.get("pelajaran")
+                            }
+                        }
+                    }
+                })
+
+                output.error = false
+                output.message = "Berhasil menambahkan data"
+            } else {
+                output.message = `Gagal menambahkan roster akibat bentrok dengan pelajaran ${roster.teacher.lesson.nama} - ${roster.teacher.nama}`
+            }
+        } else {
+            output.message = auth.message
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+    }
+
+    return Response.json(output)
 }

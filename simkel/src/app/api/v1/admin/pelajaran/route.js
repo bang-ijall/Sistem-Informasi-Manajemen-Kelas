@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs"
+import { CheckAuth } from "@/app/api/utils"
 import prisma from "@/libs/prisma"
 
 const output = {
@@ -6,24 +6,21 @@ const output = {
     message: "Fetch failed"
 }
 
-export async function GET() {
+export async function GET(request) {
     try {
-        var pelajaran = await prisma.pelajaran.findMany()
+        const auth = CheckAuth(request)
 
-        if (pelajaran) {
-            pelajaran = pelajaran.map((k, idx) => ({
-                no: idx + 1,
-                ...k,
-            }));
+        if (!auth.error && auth.message.role == "admin") {
+            const pelajaran = await prisma.pelajaran.findMany()
 
             output.error = false
-            output.message = "Fetch success"
+            output.message = "Berhasil mengambil data"
             output.data = pelajaran
         } else {
-            output.message = "Fetch refused for some reason"
+            output.message = auth.message
         }
-    } catch (error) {
-        output.message = error.message
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
     return Response.json(output)
@@ -31,18 +28,26 @@ export async function GET() {
 
 export async function POST(request) {
     try {
-        const body = await request.json();
+        const auth = CheckAuth(request)
 
-        const pelajaran = await prisma.pelajaran.create({
-            data: body
-        });
+        if (!auth.error && auth.message.role == "admin") {
+            const body = await request.formData()
 
-        output.error = false
-        output.message = "Fetch success"
-        output.data = pelajaran
-    } catch (error) {
-        console.log(error)
-        output.message = error.message;
+            await prisma.pelajaran.create({
+                data: {
+                    kode: body.get("kode"),
+                    nama: body.get("nama"),
+                    kategori: body.get("kategori")
+                }
+            })
+
+            output.error = false
+            output.message = "Berhasil menambahkan data"
+        } else {
+            output.message = auth.message
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
     return Response.json(output)

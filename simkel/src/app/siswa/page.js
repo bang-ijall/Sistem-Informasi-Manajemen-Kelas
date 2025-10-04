@@ -1,144 +1,492 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Swal from "sweetalert2";
+"use client"
 
-export default function SiswaPage() {
-  const router = useRouter();
-  const [siswa, setSiswa] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [message, setMessage] = useState("")
+import React, { useEffect, useState } from "react"
+import Swal from "sweetalert2"
 
-  const fetchSiswa = async () => {
-    try {
-      const res = await fetch("/api/v1/admin/siswa", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) throw new Error("Failed to fetch siswa");
-      const data = await res.json();
+import PageHeader from "@/components/PageHeader"
+import Modal from "@/components/Modal"
+import DataTable from "@/components/DataTable"
+import LoadingModal from "@/components/LoadingModal"
+import { getPassword } from "../api/utils"
 
-      if (data.error) {
-        setMessage(data.message);
-      } else {
-        setSiswa(data.data.map(({ id, ...rest }) => ({ ...rest })));
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+function Form({ data, kelas, onSubmit, onClose }) {
+    const required = ["nisn", "nama", "foto", "hp", "tahun_masuk", "kelas", "nama_wali", "hp_wali"]
 
-  useEffect(() => {
-    fetchSiswa();
-  }, []);
+    const [form, setForm] = useState({
+        nisn: "",
+        nama: "",
+        foto: "",
+        hp: "",
+        tahun_masuk: "",
+        kelas: "",
+        nama_wali: "",
+        hp_wali: "",
+        foto_type: ""
+    })
 
-  const columns = siswa.length > 0 ? Object.keys(siswa[0]) : [];
-
-  const handleDelete = async (nisn) => {
-    Swal.fire({
-      title: "Info!",
-      text: "Data yang sudah dihapus tidak bisa dikembalikan. Yakin ingin menghapus?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Ya, hapus!",
-      cancelButtonText: "Batal"
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          const res = await fetch(`/api/v1/admin/siswa/${nisn}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-          });
-
-          const result = await res.json();
-
-          if (!result.error) {
-            Swal.fire("Berhasil!", "Data berhasil dihapus.", "success")
-              .then(() => window.location.reload());
-          } else {
-            Swal.fire("Gagal!", result.message, "error");
-          }
-        } catch (err) {
-          console.log(err);
-          Swal.fire("Error!", "Terjadi kesalahan tak terduga", "error");
+    useEffect(() => {
+        if (data != null) {
+            setForm({
+                nisn: data.nisn,
+                nama: data.nama,
+                foto: data.foto,
+                hp: data.hp,
+                tahun_masuk: data.tahun_masuk,
+                kelas: data.class,
+                nama_wali: data.nama_wali,
+                hp_wali: data.hp_wali,
+                foto_type: "url"
+            })
         }
-      }
-    });
-  };
+    }, [data])
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold text-gray-800">Siswa</h2>
-        <button
-          onClick={() => router.push("/siswa/edit")}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow"
+    const handleChange = (key, value) => {
+        setForm((prev) => ({ ...prev, [key]: value }))
+    }
+
+    const handleSubmit = (e) => {
+        e.preventDefault()
+
+        const missing = required.filter((field) => {
+            if (field == "foto") {
+                return !(form.foto && form.foto_type)
+            }
+
+            return !form[field]
+        })
+
+        if (missing.length > 0) {
+            Swal.fire({
+                title: "Data Belum Lengkap",
+                text: `Wajib mengisi: ${missing.join(", ")}`,
+                icon: "warning",
+                confirmButtonText: "OK",
+            })
+
+            return
+        }
+
+        onSubmit(form)
+    }
+
+    return (
+        <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[80vh] overflow-y-auto p-1"
         >
-          + Tambah
-        </button>
-      </div>
+            {Object.keys(form).filter((i) => i != "foto_type" && i != "foto_preview").map((field) => {
+                const isRequired = required.includes(field)
 
-      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {columns.map((col) => (
-                <th
-                  key={col}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                return (
+                    <div key={field} className="flex flex-col">
+                        <label className="block mb-1 text-sm font-medium capitalize">
+                            {field.replace(/_/g, " ")}
+                            {isRequired && <span className="ml-1 text-red-500">*</span>}
+                        </label>
+
+                        {field == "foto" ? (
+                            <div className="space-y-2">
+                                <div>
+                                    <label className="block mb-1 text-sm font-medium">URL Foto</label>
+                                    <input
+                                        type="text"
+                                        value={form.foto_type == "url" ? form.foto : ""}
+                                        onChange={(e) => {
+                                            const val = e.target.value
+                                            handleChange("foto", val)
+                                            handleChange("foto_type", val ? "url" : "")
+                                        }}
+                                        disabled={form.foto_type == "file"}
+                                        className={`w-full rounded-md border px-3 py-2 text-sm transition ${form.foto_type == "file"
+                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200"
+                                            : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500"
+                                            }`}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block mb-1 text-sm font-medium">Upload Foto</label>
+                                    <div className="flex items-center gap-3">
+                                        <label
+                                            className={`flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition cursor-pointer ${form.foto_type == "url"
+                                                ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                                                : "bg-indigo-600 text-white hover:bg-indigo-700"
+                                                }`}
+                                        >
+                                            Pilih File
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                disabled={form.foto_type == "url"}
+                                                onChange={(e) => {
+                                                    const file = e.target.files[0]
+                                                    if (file) {
+                                                        handleChange("foto", file)
+                                                        handleChange("foto_type", "file")
+                                                        handleChange("foto_preview", URL.createObjectURL(file))
+                                                        e.target.value = ""
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+
+                                        {form.foto_type == "file" && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    handleChange("foto", "")
+                                                    handleChange("foto_type", "")
+                                                    handleChange("foto_preview", "")
+                                                }}
+                                                className="px-3 py-2 text-sm text-white transition bg-red-500 rounded-md hover:bg-red-600"
+                                            >
+                                                Hapus
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {(form.foto_type === "url" && form.foto) || form.foto_type === "file" ? (
+                                    <div className="mt-2">
+                                        <img
+                                            src={form.foto_type === "file" ? form.foto_preview : form.foto}
+                                            alt="Preview"
+                                            className="object-cover w-24 h-24 border rounded-md shadow-sm"
+                                        />
+                                    </div>
+                                ) : null}
+                            </div>
+                        ) : field.includes("kelas") ? (
+                            <select
+                                name={field}
+                                value={form[field] ?? ""}
+                                required={isRequired}
+                                onChange={(e) => handleChange(field, e.target.value)}
+                                className="w-full px-3 py-2 text-sm border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700"
+                            >
+                                <option value="" disabled>Pilih kelas</option>
+                                {kelas.map((k) => (
+                                    <option key={k.kode} value={k.kode}>
+                                        {k.kode + " - " + k.nama}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                type="text"
+                                name={field}
+                                value={form[field] ?? ""}
+                                onChange={(e) => handleChange(field, e.target.value)}
+                                className="w-full px-3 py-2 text-sm border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700"
+                            />
+                        )}
+                    </div>
+                )
+            })}
+
+            <div className="flex justify-end pt-3 space-x-2 col-span-full">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 text-black bg-gray-200 rounded hover:bg-gray-300"
                 >
-                  {col.replace("_", " ").toUpperCase()}
-                </th>
-              ))}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
-            </tr>
-          </thead>
+                    Batal
+                </button>
+                <button
+                    type="submit"
+                    className="px-4 py-2 text-white bg-indigo-600 rounded hover:bg-indigo-700"
+                >
+                    Simpan
+                </button>
+            </div>
+        </form>
+    )
+}
 
-          <tbody className="bg-white divide-y divide-gray-200">
-            {loading && (
-              <tr>
-                <td colSpan={columns.length + 1} className="px-6 py-4 text-center text-gray-500">
-                  Loading...
-                </td>
-              </tr>
-            )}
-            {error && !loading && (
-              <tr>
-                <td colSpan={columns.length + 1} className="px-6 py-4 text-center text-red-500">
-                  Error: {error}
-                </td>
-              </tr>
-            )}
-            {!loading && !error && message != "" && (
-              <tr>
-                <td colSpan={columns.length + 1} className="px-6 py-4 text-center text-gray-500">
-                  {message}
-                </td>
-              </tr>
-            )}
-            {!loading && !error && siswa.map((s) => (
-              <tr key={s.nisn}>
-                {columns.map((col) => (
-                  <td key={col} className="px-6 py-4">{s[col]}</td>
-                ))}
-                <td className="px-6 py-4 space-x-2">
-                  <button
-                    onClick={() => router.push(`/siswa/edit?nisn=${s.nisn}`)}
-                    className="px-3 py-1 bg-yellow-400 text-white rounded">Edit
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(s.nisn)}
-                    className="px-3 py-1 bg-red-500 text-white rounded">Hapus
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+export default function Page() {
+    const [siswa, setSiswa] = useState([])
+    const [field, setField] = useState([])
+    const [kelas, setKelas] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [openPopup, setOpenPopup] = useState(false)
+    const [edit, setEdit] = useState(null)
+    const [posting, setPosting] = useState(false)
+
+    const fetchAPI = async (token) => {
+        setLoading(true)
+        var message = ""
+
+        try {
+            var res = await fetch("/api/v1/admin/kelas", {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            })
+
+            var body = await res.json()
+            message = body.message
+
+            if (!body.error) {
+                setKelas(body.data)
+
+                res = await fetch("/api/v1/admin/siswa", {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                })
+
+                body = await res.json()
+                message = body.message
+
+                if (!body.error) {
+                    setSiswa(body.data)
+
+                    if (body.data.length > 0) {
+                        setField(Object.keys(body.data[0]).filter((f) => f != "class"))
+                    }
+
+                    setLoading(false)
+                    return
+                }
+            }
+        } catch (_) {
+            message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+        }
+
+        if (message == "Unauthorized") {
+            window.location.href = "/login"
+            return
+        }
+
+        setLoading(false)
+        Swal.fire({
+            title: "Error!",
+            text: message,
+            icon: "error",
+            confirmButtonText: "OK",
+        }).then(() => {
+            window.location.reload()
+        })
+    }
+
+    useEffect(() => {
+        const token = localStorage.getItem("token")
+
+        if (token) {
+            fetchAPI(token)
+        } else {
+            window.location.href = "/login"
+        }
+    }, [])
+
+    const handleSimpan = async (form) => {
+        setPosting(true)
+        const token = localStorage.getItem("token")
+
+        try {
+            const method = edit ? "PATCH" : "POST"
+            const data = new FormData()
+
+            Object.keys(form).forEach((key) => {
+                if (form[key] != undefined && form[key] != null) {
+                    data.append(key, form[key])
+                }
+            })
+
+            const res = await fetch(edit ? `/api/v1/admin/siswa/${edit.nisn}` : "/api/v1/admin/siswa", {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                method: method,
+                body: data
+            })
+
+            const body = await res.json()
+
+            if (!body.error) {
+                Swal.fire({
+                    title: "Berhasil!",
+                    text: body.message,
+                    icon: "success",
+                    confirmButtonText: "OK",
+                })
+
+                fetchAPI(token)
+                setOpenPopup(false)
+                setEdit(null)
+            } else {
+                if (body.message == "Unauthorized") {
+                    window.location.href = "/login"
+                    return
+                }
+
+                Swal.fire({
+                    title: "Gagal!",
+                    text: body.message,
+                    icon: "error",
+                    confirmButtonText: "OK",
+                })
+            }
+        } catch (_) {
+            Swal.fire({
+                title: "Error!",
+                text: "Ada masalah pada server kami. Silahkan coba lagi nanti",
+                icon: "error",
+                confirmButtonText: "OK",
+            })
+        }
+
+        setPosting(false)
+    }
+
+    const handleHapus = async (siswa) => {
+        Swal.fire({
+            title: "Peringatan!",
+            text: `Data yang sudah dihapus tidak bisa dikembalikan. Yakin ingin menghapus ${siswa.nama}?`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Ya",
+            cancelButtonText: "Batal"
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                setPosting(true)
+                const token = localStorage.getItem("token")
+
+                try {
+                    const res = await fetch(`/api/v1/admin/siswa/${siswa.nisn}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                        method: "DELETE"
+                    })
+
+                    const body = await res.json()
+
+                    if (!body.error) {
+                        Swal.fire({
+                            title: "Berhasil!",
+                            text: body.message,
+                            icon: "success",
+                            confirmButtonText: "OK",
+                        })
+
+                        fetchAPI(token)
+                    } else {
+                        if (body.message == "Unauthorized") {
+                            window.location.href = "/login"
+                            return
+                        }
+
+                        Swal.fire({
+                            title: "Gagal!",
+                            text: body.message,
+                            icon: "error",
+                            confirmButtonText: "OK",
+                        })
+                    }
+                } catch (_) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: "Ada masalah pada server kami. Silahkan coba lagi nanti",
+                        icon: "error",
+                        confirmButtonText: "OK",
+                    })
+                }
+
+                setPosting(false)
+            }
+        })
+    }
+
+    const handleShare = async (user) => {
+        const message = encodeURIComponent(`Halo ${user.nama},\nakun kamu sudah dibuat.\n\nID: ${user.nisn}\nPassword: ${getPassword(user.nisn)}`)
+
+        var hp = user.hp
+
+        if (hp.startsWith("0")) {
+            hp = "62" + hp.substring(1)
+        }
+
+        window.open(`https://api.whatsapp.com/send/?phone=${hp}&text=${message}&type=phone_number&app_absent=0`, "_blank")
+    }
+
+    const columns = field.map((f) => {
+        if (f == "foto") {
+            return {
+                header: "Foto",
+                accessor: (row) => {
+                    if (!row[f] || row[f] === "-") {
+                        return <span className="italic text-gray-400">Tidak ada foto</span>
+                    }
+
+                    return (
+                        <div className="w-12 h-12 overflow-hidden rounded-md">
+                            <img
+                                src={row[f]}
+                                alt="Foto siswa"
+                                className="object-cover w-full h-full"
+                                onClick={() => Swal.fire({
+                                    imageUrl: row[f],
+                                    imageAlt: "Foto siswa",
+                                    showConfirmButton: false,
+                                })}
+                            />
+                        </div>
+                    )
+                }
+            }
+        }
+
+        return {
+            header: f.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            accessor: f,
+        }
+    })
+
+
+    return (
+        <>
+            <PageHeader
+                title="Siswa"
+                description="Kelola data siswa"
+                actionButtonText="Tambah Siswa"
+                onActionButtonClick={() => setOpenPopup(true)}
+            />
+
+            <DataTable
+                columns={columns}
+                data={siswa}
+                onEdit={(item) => {
+                    setEdit(item)
+                    setOpenPopup(true)
+                }}
+                onDelete={handleHapus}
+                onShare={handleShare}
+            />
+
+            <Modal
+                isOpen={openPopup}
+                onClose={() => {
+                    setOpenPopup(false)
+                    setEdit(null)
+                }}
+                title={edit ? "Edit Siswa" : "Tambah Siswa"}
+            >
+                <Form
+                    fields={field}
+                    data={edit}
+                    kelas={kelas}
+                    onSubmit={handleSimpan}
+                    onClose={() => {
+                        setOpenPopup(false)
+                        setEdit(null)
+                    }}
+                />
+            </Modal>
+
+            <LoadingModal isOpen={loading} text="Sedang memuat data..." />
+            <LoadingModal isOpen={posting} text="Sedang mengirim..." />
+        </>
+    )
 }

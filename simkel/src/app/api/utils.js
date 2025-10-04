@@ -1,5 +1,6 @@
-import jwt from "jsonwebtoken";
-import { formatInTimeZone } from "date-fns-tz"
+import jwt from "jsonwebtoken"
+import CryptoJS from "crypto-js";
+import { toZonedTime } from "date-fns-tz";
 
 function isAuthValid(req) {
     const authHeader = req.headers.get("authorization");
@@ -37,9 +38,14 @@ export function CheckAuth(req) {
 }
 
 export function GetDatetime(date, zone) {
-    if (zone == "UTC") {
-        return formatInTimeZone(date, zone, "yyyy-MM-dd'T'HH:mm:ss.SSS")
-    } else {
-        return formatInTimeZone(date, zone, "yyyy-MM-dd HH:mm:ss")
-    }
+    return toZonedTime(date, zone)
+}
+
+export function getPassword(id, length = 12) {
+    const hmac = CryptoJS.HmacSHA256(id, "SiSeko_Key");
+    const pw = CryptoJS.enc.Base64.stringify(hmac)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+    return pw.slice(0, length);
 }
