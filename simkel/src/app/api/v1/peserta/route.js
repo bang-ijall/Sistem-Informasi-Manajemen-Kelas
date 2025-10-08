@@ -40,13 +40,13 @@ export async function GET(request) {
                     }
                 })
 
-                if (kelas && kelas.guru.length == 1 && kelas.siswa.length > 0) {
+                if (kelas && kelas.guru && kelas.siswa.length > 0) {
                     output.error = false
                     output.message = "Berhasil mengambil data"
                     output.data = {
                         guru: {
-                            nama: kelas.guru[0].nama,
-                            foto: kelas.guru[0].user.foto
+                            nama: kelas.guru.nama,
+                            foto: kelas.guru.user.foto
                         },
                         siswa: kelas.siswa.map(i => ({
                             nama: i.nama,

@@ -112,6 +112,7 @@ export async function POST(request) {
 
                                     const token = jwt.sign({
                                         id: id,
+                                        nama: siswa.nama,
                                         role: role,
                                         kelas: siswa.class.kode
                                     },
@@ -204,6 +205,7 @@ export async function POST(request) {
 
                                     const token = jwt.sign({
                                         id: id,
+                                        nama: guru.nama,
                                         role: role,
                                         kelas: guru.class ? guru.class.kode : null,
                                         pelajaran: guru.lesson.kode
@@ -230,13 +232,13 @@ export async function POST(request) {
                                         foto: user.foto,
                                         role: role,
                                         kelas: kelas,
-                                            roster: guru.roster.filter(r => r.hari == day_name)
-                                                .map(r => ({
-                                                    id: r.id,
-                                                    jam_mulai: r.jam_mulai,
-                                                    jam_selesai: r.jam_selesai,
-                                                    kelas: r.class.nama
-                                                }))
+                                        roster: guru.roster.filter(r => r.hari == day_name)
+                                            .map(r => ({
+                                                id: r.id,
+                                                jam_mulai: r.jam_mulai,
+                                                jam_selesai: r.jam_selesai,
+                                                kelas: r.class.nama
+                                            }))
                                     }
                                 }
 

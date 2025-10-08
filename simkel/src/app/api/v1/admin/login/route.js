@@ -27,7 +27,6 @@ export async function POST(request) {
             });
 
             if (admin) {
-                console.log(await bcrypt.hash(password, 12))
                 const is_valid = await bcrypt.compare(password, admin.password);
 
                 if (is_valid) {

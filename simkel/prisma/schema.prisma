@@ -135,15 +135,16 @@ model tugas {
 }
 
 model status_tugas {
-    id      Int         @id @default(autoincrement())
-    siswa   String
-    student siswa       @relation(fields: [siswa], references: [nisn])
-    tugas   Int
-    task    tugas       @relation(fields: [tugas], references: [id])
-    status  task_status
-    berkas  String[]
-    tanggal DateTime?
-    nilai   Float?
+    id        Int         @id @default(autoincrement())
+    siswa     String
+    student   siswa       @relation(fields: [siswa], references: [nisn])
+    tugas     Int
+    task      tugas       @relation(fields: [tugas], references: [id])
+    status    task_status
+    deskripsi String?
+    berkas    String[]
+    tanggal   DateTime?
+    nilai     Float?
 }
 
 model materi {
