@@ -1,42 +1,41 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth } from "../../utils.js"
+import { CheckAuth, getOutput } from "../../utils.js"
 
 export async function GET(request) {
-    const output = {
-        error: true,
-        message: "Server kami menolak permintaan dari anda!"
-    }
+    const output = getOutput()
 
     try {
         const auth = CheckAuth(request)
 
         if (!auth.error) {
-            if (auth.message.role != "guru") {
-                const status = await prisma.status_tugas.findMany({
-                    where: {
-                        siswa: auth.message.id,
-                        status: "dinilai"
-                    },
-                    select: {
-                        nilai: true,
-                        berkas: true,
-                        tanggal: true,
-                        task: {
-                            select: {
-                                judul: true,
-                                deskripsi: true,
-                                batas_waktu: true,
-                                dokumen_tugas: true,
-                                jenis: true,
-                                tanggal: true
+            switch (auth.message.role) {
+                case "siswa":
+                case "wali": {
+                    const status = await prisma.status_tugas.findMany({
+                        where: {
+                            siswa: auth.message.id,
+                            status: "dinilai"
+                        },
+                        select: {
+                            nilai: true,
+                            berkas: true,
+                            tanggal: true,
+                            task: {
+                                select: {
+                                    judul: true,
+                                    deskripsi: true,
+                                    batas_waktu: true,
+                                    dokumen_tugas: true,
+                                    jenis: true,
+                                    tanggal: true
+                                }
                             }
                         }
-                    }
-                })
+                    })
 
-                if (status) {
                     output.error = false
                     output.message = "Berhasil mengambil data"
+
                     output.data = status.map(i => ({
                         judul: i.task.judul,
                         deskripsi: i.task.deskripsi,
@@ -48,33 +47,10 @@ export async function GET(request) {
                         tanggal: i.tanggal,
                         nilai: i.nilai
                     }))
-                }
-            } else {
-                const tugas = await prisma.tugas.findMany({
-                    where: {
-                        guru: auth.message.id,
-                    },
-                    select: {
-                        id: true,
-                        judul: true,
-                        deskripsi: true,
-                        batas_waktu: true,
-                        dokumen_tugas: true,
-                        jenis: true,
-                        tanggal: true
-                    }
-                })
 
-                if (tugas.length > 0) {
-                    output.error = false
-                    output.message = "Berhasil mengambil data"
-                    output.data = tugas.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
-                } else {
-                    output.message = "Tidak menemukan tugas Anda"
+                    break
                 }
             }
-        } else {
-            return Response.json(auth)
         }
     } catch (error) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
@@ -84,45 +60,38 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-    const output = {
-        error: true,
-        message: "Server kami menolak permintaan dari anda!"
-    }
+    const output = getOutput()
 
     try {
         const auth = CheckAuth(request)
 
         if (!auth.error) {
-            if (auth.message.role == "guru") {
-                const body = await request.formData()
-                const id = parseInt(body.get("id"))
-                const tugas = parseInt(body.get("tugas"))
-                const nilai = parseFloat(body.get("nilai"))
+            switch (auth.message.role) {
+                case "guru": {
+                    const body = await request.formData()
+                    const id = parseInt(body.get("id"))
+                    const nilai = parseFloat(body.get("nilai").replace(",", "."))
 
-                const status = await prisma.status_tugas.updateMany({
-                    where: {
-                        id: id,
-                        tugas: tugas,
-                        status: "sudah",
-                        task: {
-                            guru: auth.message.id
+                    await prisma.status_tugas.update({
+                        where: {
+                            id: id,
+                            status: "sudah",
+                            task: {
+                                guru: auth.message.id,
+                                jenis: "submission"
+                            }
+                        },
+                        data: {
+                            nilai: nilai,
+                            status: "dinilai"
                         }
-                    },
-                    data: {
-                        nilai: nilai,
-                        status: "dinilai"
-                    }
-                })
+                    })
 
-                if (status.count == 1) {
                     output.error = false
                     output.message = "Berhasil memperbarui data"
-                } else {
-                    output.message = "Gagal memperbarui data"
+                    break
                 }
             }
-        } else {
-            return Response.json(auth)
         }
     } catch (error) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"

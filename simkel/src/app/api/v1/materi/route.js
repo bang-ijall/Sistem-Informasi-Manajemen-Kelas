@@ -1,5 +1,7 @@
 import prisma from "@/libs/prisma"
 import { CheckAuth } from "../../utils.js"
+import fs from "fs"
+import path from "path"
 
 const output = {
     error: true,
@@ -97,17 +99,45 @@ export async function POST(request) {
                 const body = await request.formData()
                 const judul = body.get("judul")
                 const deskripsi = body.get("deskripsi")
-                let modul = body.get("modul")
-                modul = JSON.parse(modul)
-                const kelas = body.get("kelas")
+                const modul = body.getAll("modul[]")
+                const kelas = body.getAll("kelas[]")
+                let files = []
+
+                if (judul && ((deskripsi && deskripsi != "") || (modul.length > 0)) && kelas.length > 0) {
+                    for (const file of modul) {
+                        if (typeof file === "string") {
+                            files.push(file)
+                            continue
+                        }
+
+                        const ext = path.extname(file.name)
+                        const buffer = Buffer.from(await file.arrayBuffer())
+                        const folder = path.join(process.cwd(), "public", "guru", `${auth.message.nama}_${auth.message.id}`, `materi`)
+
+                        if (!fs.existsSync(folder)) {
+                            fs.mkdirSync(folder, { recursive: true })
+                        }
+
+                        const name = `${kelas} - ${judul}_${new Date().getTime()}${ext}`
+                        const file_ = path.join(folder, name)
+                        fs.writeFileSync(file_, buffer)
+
+                        files.push(`${process.env.NEXT_PUBLIC_BASE_URL}/guru/${auth.message.nama}_${auth.message.id}/materi/${name}`)
+                    }
+                }
 
                 await prisma.materi.create({
                     data: {
                         judul: judul,
                         deskripsi: deskripsi,
-                        modul: modul,
-                        kelas: kelas,
-                        guru: auth.message.id
+                        modul: files,
+                        tanggal: new Date(),
+                        guru: auth.message.id,
+                        kelas: {
+                            connect: kelas.map(k => ({
+                                kode: k
+                            }))
+                        }
                     }
                 })
 

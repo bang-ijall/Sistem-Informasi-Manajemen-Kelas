@@ -49,3 +49,10 @@ export function getPassword(id, length = 12) {
         .replace(/=+$/, "");
     return pw.slice(0, length);
 }
+
+export function getOutput() {
+    return {
+        error: true,
+        message: "Server kami menolak permintaan dari anda!"
+    }
+}

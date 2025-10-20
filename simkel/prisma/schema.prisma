@@ -42,6 +42,8 @@ model roster {
     teacher     guru   @relation(fields: [guru], references: [nip])
 
     kehadiran kehadiran[]
+
+    @@unique([guru, hari, jam_mulai, jam_selesai])
 }
 
 model siswa {
@@ -126,8 +128,7 @@ model tugas {
     soal_kuis     Json?
     dokumen_tugas String[]
     tanggal       DateTime
-    kelas         String
-    class         kelas    @relation(fields: [kelas], references: [kode])
+    kelas         kelas[]
     guru          String
     teacher       guru     @relation(fields: [guru], references: [nip])
 
@@ -145,6 +146,8 @@ model status_tugas {
     berkas    String[]
     tanggal   DateTime?
     nilai     Float?
+    
+    @@unique([siswa, tugas])
 }
 
 model materi {
@@ -153,8 +156,7 @@ model materi {
     deskripsi String?
     modul     String[]
     tanggal   DateTime
-    kelas     String
-    class     kelas    @relation(fields: [kelas], references: [kode])
+    kelas     kelas[]
     guru      String
     teacher   guru     @relation(fields: [guru], references: [nip])
 }

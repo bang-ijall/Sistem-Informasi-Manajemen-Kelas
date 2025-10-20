@@ -209,11 +209,9 @@ export async function POST(request) {
                                         role: role,
                                         kelas: guru.class ? guru.class.kode : null,
                                         pelajaran: guru.lesson.kode
-                                    },
-                                        process.env.JWT_SECRET,
-                                        {
-                                            expiresIn: "1d"
-                                        })
+                                    }, process.env.JWT_SECRET, {
+                                        expiresIn: "1d"
+                                    })
 
                                     for (const r of guru.roster) {
                                         const class_ = r.class;
