@@ -105,7 +105,7 @@ export async function POST(request) {
                 case "guru": {
                     const body = await request.formData()
                     const id = body.get("id")
-                    const data = JSON.parse(body.getAll("data"))
+                    const data = body.getAll("data[]")
 
                     if (id && data.length > 0) {
                         const now = new Date()
@@ -133,7 +133,17 @@ export async function POST(request) {
                         })
 
                         if (roster) {
-                            
+                            await prisma.kehadiran.createMany({
+                                data: data.map(i => ({
+                                    tanggal: new Date(),
+                                    status: i.status,
+                                    siswa: i.siswa,
+                                    roster: id
+                                }))
+                            })
+
+                            output.error = false
+                            output.message = "Berhasil melakukan presensi"
                         }
                     }
 

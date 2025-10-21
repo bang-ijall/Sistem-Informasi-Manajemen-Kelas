@@ -1,13 +1,9 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth } from "../../../utils.js"
-import { select } from "@nextui-org/react"
-
-const output = {
-    error: true,
-    message: "Server kami menolak permintaan dari anda!"
-}
+import { CheckAuth, getOutput } from "../../../utils.js"
 
 export async function GET(request, { params }) {
+    const output = getOutput()
+
     try {
         const auth = CheckAuth(request)
         const { id } = await params
@@ -63,6 +59,95 @@ export async function GET(request, { params }) {
             return Response.json(auth)
         }
     } catch (error) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+    }
+
+    return Response.json(output)
+}
+
+export async function PATCH(request, { params }) {
+    let output = getOutput()
+
+    try {
+        const auth = CheckAuth(request)
+
+        if (!auth.error) {
+            switch (auth.message.role) {
+                case "guru": {
+                    const body = await request.formData()
+                    const { id } = await params
+                    const judul = body.get("judul")
+                    const deskripsi = body.get("deskripsi")
+                    const batas_waktu = new Date(body.get("batas_waktu"))
+
+                    if (id > 0 && judul != "" && deskripsi != "" && batas_waktu != "") {
+                        await prisma.tugas.update({
+                            where: {
+                                id: parseInt(id),
+                                jenis: "kuis",
+                                guru: auth.message.id
+                            },
+                            data: {
+                                judul: judul,
+                                deskripsi: deskripsi,
+                                batas_waktu: batas_waktu
+                            }
+                        })
+
+                        output.error = false
+                        output.message = "Berhasil memperbarui kuis"
+                    }
+
+                    break
+                }
+            }
+        } else {
+            output = auth
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+    }
+
+    return Response.json(output)
+}
+
+export async function DELETE(request, { params }) {
+    let output = getOutput()
+
+    try {
+        const auth = CheckAuth(request)
+
+        if (!auth.error) {
+            switch (auth.message.role) {
+                case "guru": {
+                    const { id } = await params
+
+                    if (parseInt(id) > 0) {
+                        await prisma.status_tugas.deleteMany({
+                            where: {
+                                task: {
+                                    id: parseInt(id),
+                                    jenis: "kuis"
+                                }
+                            }
+                        })
+
+                        await prisma.tugas.delete({
+                            where: {
+                                id: parseInt(id),
+                                jenis: "kuis"
+                            }
+                        })
+
+                        output.error = false
+                        output.message = "Berhasil menghapus kuis"
+                    }
+                }
+            }
+        } else {
+            output = auth
+        }
+    } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

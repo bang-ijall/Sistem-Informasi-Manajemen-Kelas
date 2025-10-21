@@ -128,7 +128,8 @@ model tugas {
     soal_kuis     Json?
     dokumen_tugas String[]
     tanggal       DateTime
-    kelas         kelas[]
+    kelas         String
+    class         kelas    @relation(fields: [kelas], references: [kode])
     guru          String
     teacher       guru     @relation(fields: [guru], references: [nip])
 
@@ -146,7 +147,7 @@ model status_tugas {
     berkas    String[]
     tanggal   DateTime?
     nilai     Float?
-    
+
     @@unique([siswa, tugas])
 }
 
@@ -156,7 +157,8 @@ model materi {
     deskripsi String?
     modul     String[]
     tanggal   DateTime
-    kelas     kelas[]
+    kelas     String
+    class     kelas    @relation(fields: [kelas], references: [kode])
     guru      String
     teacher   guru     @relation(fields: [guru], references: [nip])
 }

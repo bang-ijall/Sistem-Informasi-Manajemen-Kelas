@@ -89,48 +89,49 @@ export async function POST(request) {
                     console.log(soal_kuis)
 
                     if (judul != "" && waktu_kuis > 0 && soal_kuis.length > 0 && kelas.length > 0) {
-                        const siswa = await prisma.siswa.findMany({
-                            where: {
-                                kelas: {
-                                    in: kelas
+                        for (const item of kelas) {
+                            const siswa = await prisma.siswa.findMany({
+                                where: {
+                                    kelas: item
+                                },
+                                select: {
+                                    nisn: true
                                 }
-                            },
-                            select: {
-                                nisn: true
-                            }
-                        })
+                            })
 
-                        await prisma.tugas.create({
-                            data: {
-                                judul: judul,
-                                deskripsi: deskripsi,
-                                batas_waktu: batas_waktu,
-                                jenis: "kuis",
-                                waktu_kuis: waktu_kuis,
-                                soal_kuis: soal_kuis,
-                                tanggal: new Date(),
-                                kelas: {
-                                    connect: kelas.map(k => ({
-                                        kode: k
-                                    }))
-                                },
-                                teacher: {
-                                    connect: {
-                                        nip: auth.message.id
+                            await prisma.tugas.create({
+                                data: {
+                                    judul: judul,
+                                    deskripsi: deskripsi,
+                                    batas_waktu: batas_waktu,
+                                    jenis: "kuis",
+                                    waktu_kuis: waktu_kuis,
+                                    soal_kuis: soal_kuis,
+                                    tanggal: new Date(),
+                                    class: {
+                                        connect: {
+                                            kode: item
+                                        }
+                                    },
+                                    teacher: {
+                                        connect: {
+                                            nip: auth.message.id
+                                        }
+                                    },
+                                    status_tugas: {
+                                        create: siswa.map(i => ({
+                                            siswa: i.nisn,
+                                            status: "belum"
+                                        }))
                                     }
-                                },
-                                status_tugas: {
-                                    create: siswa.map(i => ({
-                                        siswa: i.nisn,
-                                        status: "belum"
-                                    }))
                                 }
-                            }
-                        })
+                            })
+                        }
+
+                        output.error = false
+                        output.message = "Kuis berhasil dibuat"
                     }
 
-                    output.error = false
-                    output.message = "Kuis berhasil dibuat"
                     break
                 }
             }

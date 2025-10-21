@@ -154,19 +154,50 @@ export async function POST(request) {
     return Response.json(output)
 }
 
-export async function PATCH(request) {
+export async function PATCH(request, { params }) {
     try {
         const auth = CheckAuth(request)
 
         if (!auth.error) {
             if (auth.message.role == "guru") {
                 const body = await request.formData()
-                const id = parseInt(body.get("id"))
+                const { id } = await params
                 const judul = body.get("judul")
                 const deskripsi = body.get("deskripsi")
-                let modul = body.get("modul")
-                modul = JSON.parse(modul)
-                const kelas = body.get("kelas")
+                const modul = body.getAll("modul[]")
+                let files = []
+
+                if (judul != "" && deskripsi != "" && modul.length > 0) {
+                    const materi = await params.materi.findUnique({
+                        where: {
+                            id: id,
+                            guru: auth.message.id
+                        },
+                        select: {
+                            
+                        }
+                    })
+                    for (const file of modul) {
+                        if (typeof file === "string") {
+                            files.push(file)
+                            continue
+                        }
+
+                        const ext = path.extname(file.name)
+                        const buffer = Buffer.from(await file.arrayBuffer())
+                        const folder = path.join(process.cwd(), "public", "guru", `${auth.message.nama}_${auth.message.id}`, `materi`)
+
+                        if (!fs.existsSync(folder)) {
+                            fs.mkdirSync(folder, { recursive: true })
+                        }
+
+                        const name = `${kelas} - ${judul}_${new Date().getTime()}${ext}`
+                        const file_ = path.join(folder, name)
+                        fs.writeFileSync(file_, buffer)
+
+                        files.push(`${process.env.NEXT_PUBLIC_BASE_URL}/guru/${auth.message.nama}_${auth.message.id}/materi/${name}`)
+                    }
+                }
 
                 await prisma.materi.update({
                     where: {

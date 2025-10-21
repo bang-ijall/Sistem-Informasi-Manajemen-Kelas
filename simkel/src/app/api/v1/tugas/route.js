@@ -171,15 +171,11 @@ export async function POST(request) {
                     const judul = body.get("judul")
                     const deskripsi = body.get("deskripsi")
                     const batas_waktu = new Date(body.get("batas_waktu"))
-                    // const jenis = body.get("jenis")
-                    // const waktu_kuis = parseInt(body.get("waktu_kuis"))
-                    // const soal_kuis = body.get("soal_kuis[]")
                     const dokumen_tugas = body.getAll("dokumen_tugas[]")
                     const kelas = body.getAll("kelas[]")
                     let files = []
 
                     if (judul && deskripsi && batas_waktu && kelas.length > 0 && dokumen_tugas.length > 0) {
-                    // if (judul && batas_waktu && jenis && kelas.length > 0 && ((jenis == "submission" && dokumen_tugas.length > 0) || (jenis == "kuis" && waktu_kuis && soal_kuis.length > 0))) {
                         for (const file of dokumen_tugas) {
                             if (typeof file === "string") {
                                 files.push(file)
@@ -201,45 +197,45 @@ export async function POST(request) {
                             files.push(`${process.env.NEXT_PUBLIC_BASE_URL}/guru/${auth.message.nama}_${auth.message.id}/tugas/${name}`)
                         }
 
-                        const siswa = await prisma.siswa.findMany({
-                            where: {
-                                kelas: {
-                                    in: kelas
+                        for (const item of kelas) {
+                            const siswa = await prisma.siswa.findMany({
+                                where: {
+                                    kelas: item
+                                },
+                                select: {
+                                    nisn: true
                                 }
-                            },
-                            select: {
-                                nisn: true
-                            }
-                        })
+                            })
 
-                        await prisma.tugas.create({
-                            data: {
-                                judul: judul,
-                                deskripsi: deskripsi,
-                                batas_waktu: batas_waktu,
-                                jenis: "submission",
-                                waktu_kuis: null,
-                                soal_kuis: null,
-                                dokumen_tugas: files,
-                                tanggal: new Date(),
-                                kelas: {
-                                    connect: kelas.map(k => ({
-                                        kode: k
-                                    }))
-                                },
-                                teacher: {
-                                    connect: {
-                                        nip: auth.message.id
+                            await prisma.tugas.create({
+                                data: {
+                                    judul: judul,
+                                    deskripsi: deskripsi,
+                                    batas_waktu: batas_waktu,
+                                    jenis: "submission",
+                                    waktu_kuis: null,
+                                    soal_kuis: null,
+                                    dokumen_tugas: files,
+                                    tanggal: new Date(),
+                                    class: {
+                                        connect: {
+                                            kode: item
+                                        }
+                                    },
+                                    teacher: {
+                                        connect: {
+                                            nip: auth.message.id
+                                        }
+                                    },
+                                    status_tugas: {
+                                        create: siswa.map(i => ({
+                                            siswa: i.nisn,
+                                            status: "belum"
+                                        }))
                                     }
-                                },
-                                status_tugas: {
-                                    create: siswa.map(i => ({
-                                        siswa: i.nisn,
-                                        status: "belum"
-                                    }))
                                 }
-                            }
-                        })
+                            })
+                        }
 
                         output.error = false
                         output.message = "Tugas anda berhasil dibuat"

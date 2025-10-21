@@ -40,6 +40,7 @@ export async function GET(request, { params }) {
                                 select: {
                                     siswa: {
                                         select: {
+                                            nisn: true,
                                             nama: true
                                         }
                                     }
@@ -51,6 +52,9 @@ export async function GET(request, { params }) {
                     if (roster) {
                         output.message = "Lakukan absensi terlebih dahulu"
                         output.data = {
+                            id: roster.class.siswa
+                                .sort((a, b) => a.nama.localeCompare(b.nama))
+                                .map(i => i.nisn),
                             siswa: roster.class.siswa
                                 .sort((a, b) => a.nama.localeCompare(b.nama))
                                 .map(i => i.nama)
