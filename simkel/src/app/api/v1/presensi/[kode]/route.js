@@ -1,8 +1,8 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth, getOutput } from "../../../utils.js"
+import { CheckAuth, getOutput } from "@/app/api/utils"
 
 export async function GET(request, { params }) {
-    const output = getOutput()
+    let output = getOutput()
 
     try {
         const auth = CheckAuth(request)
@@ -10,7 +10,8 @@ export async function GET(request, { params }) {
         if (!auth.error) {
             switch (auth.message.role) {
                 case "guru": {
-                    const { kode } = await params
+                    const param = await params
+                    const kode = param.kode
 
                     let siswa = await prisma.siswa.findMany({
                         where: {
@@ -33,8 +34,9 @@ export async function GET(request, { params }) {
                         }
                     })
 
+                    output.error = false
+
                     if (siswa.length > 0) {
-                        output.error = false
                         output.message = "Berhasil mengambil data"
 
                         siswa = siswa.sort((a, b) => a.nama.localeCompare(b.nama))
@@ -70,9 +72,10 @@ export async function GET(request, { params }) {
                     break
                 }
             }
+        } else {
+            output = auth
         }
     } catch (_) {
-        console.log(_)
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

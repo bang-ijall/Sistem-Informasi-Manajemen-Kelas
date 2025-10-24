@@ -1,11 +1,8 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth } from "../../utils.js"
+import { CheckAuth, getOutput } from "@/app/api/utils"
 
 export async function GET(request) {
-    const output = {
-        error: true,
-        message: "Server kami menolak permintaan dari anda!"
-    }
+    let output = getOutput()
 
     try {
         const auth = CheckAuth(request)
@@ -40,7 +37,7 @@ export async function GET(request) {
                     }
                 })
 
-                if (kelas && kelas.guru && kelas.siswa.length > 0) {
+                if (kelas && (kelas.guru || kelas.siswa.length > 0)) {
                     output.error = false
                     output.message = "Berhasil mengambil data"
                     output.data = {
@@ -60,9 +57,9 @@ export async function GET(request) {
                 output.message = "Tidak menemukan peserta kelas Anda"
             }
         } else {
-            return Response.json(auth)
+            output = auth
         }
-    } catch (error) {
+    } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

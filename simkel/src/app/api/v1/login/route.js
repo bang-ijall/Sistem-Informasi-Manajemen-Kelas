@@ -1,27 +1,24 @@
 import bcrypt from "bcryptjs"
 import prisma from "@/libs/prisma"
-import jwt from "jsonwebtoken";
-import { select } from "@nextui-org/react";
+import jwt from "jsonwebtoken"
+import { getOutput } from "@/app/api/utils"
 
 export async function POST(request) {
-    const output = {
-        error: true,
-        message: "Server kami menolak permintaan dari anda!"
-    }
+    let output = getOutput()
 
     try {
-        const body = await request.text()
-        const params = new URLSearchParams(body)
+        const body = await request.formData()
+        const id = body.get("id")
+        const password = body.get("password")
+        const role = body.get("role")
 
-        const id = params.get("id")
-        const password = params.get("password")
-        const role = params.get("role")
-
-        if (id && password && role) {
-            const is_wali = role === "wali";
+        if (id != "" && password != "" && role != "") {
+            const is_wali = role == "wali"
 
             const user = await prisma.user.findUnique({
-                where: { id },
+                where: {
+                    id: id
+                },
                 select: {
                     id: true,
                     password: !is_wali,
@@ -29,219 +26,215 @@ export async function POST(request) {
                     foto: true,
                     role: true
                 }
-            });
+            })
 
             if (user) {
-                const pw = is_wali ? user.old_password : user.password;
-                const is_valid = await bcrypt.compare(password, pw);
+                const pw = is_wali ? user.old_password : user.password
+                const is_valid = await bcrypt.compare(password, pw)
 
                 if (is_valid) {
                     let data = null
+                    const now = new Date()
+
+                    const hari = now.toLocaleDateString("in", {
+                        weekday: "long"
+                    })
 
                     switch (role) {
                         case "siswa":
-                        case "wali":
-                            {
-                                const today = new Date();
-                                const day_name = today.toLocaleDateString("in", { weekday: "long" })
-                                const lastWeek = new Date();
-                                lastWeek.setDate(today.getDate() - 7);
-                                const nextWeek = new Date();
-                                nextWeek.setDate(today.getDate() + 7);
+                        case "wali": {
+                            const last_week = new Date()
+                            last_week.setDate(now.getDate() - 7)
+                            const next_week = new Date()
+                            next_week.setDate(now.getDate() + 7)
 
-                                const siswa = await prisma.siswa.findUnique({
-                                    where: {
-                                        nisn: id
-                                    },
-                                    select: {
-                                        nama: true,
-                                        class: {
-                                            select: {
-                                                kode: true,
-                                                nama: true,
-                                                roster: {
-                                                    select: {
-                                                        id: true,
-                                                        hari: true,
-                                                        jam_mulai: true,
-                                                        jam_selesai: true,
-                                                        teacher: {
-                                                            select: {
-                                                                nama: true,
-                                                                lesson: {
-                                                                    select: {
-                                                                        kode: true,
-                                                                        nama: true
-                                                                    }
+                            const siswa = await prisma.siswa.findUnique({
+                                where: {
+                                    nisn: id
+                                },
+                                select: {
+                                    nama: true,
+                                    class: {
+                                        select: {
+                                            kode: true,
+                                            nama: true,
+                                            roster: {
+                                                select: {
+                                                    id: true,
+                                                    hari: true,
+                                                    jam_mulai: true,
+                                                    jam_selesai: true,
+                                                    teacher: {
+                                                        select: {
+                                                            nama: true,
+                                                            lesson: {
+                                                                select: {
+                                                                    kode: true,
+                                                                    nama: true
                                                                 }
                                                             }
                                                         }
                                                     }
                                                 }
                                             }
-                                        },
-                                        kehadiran: {
-                                            where: {
-                                                siswa: id,
-                                                tanggal: {
-                                                    gte: lastWeek,
-                                                    lte: today
-                                                }
-                                            },
-                                            select: {
-                                                status: true
+                                        }
+                                    },
+                                    kehadiran: {
+                                        where: {
+                                            siswa: id,
+                                            tanggal: {
+                                                gte: last_week,
+                                                lte: now
                                             }
                                         },
-                                        status_tugas: {
-                                            where: {
-                                                siswa: id,
-                                                status: "belum",
-                                                task: {
-                                                    batas_waktu: {
-                                                        gte: today,
-                                                        lte: nextWeek
-                                                    }
+                                        select: {
+                                            status: true
+                                        }
+                                    },
+                                    status_tugas: {
+                                        where: {
+                                            siswa: id,
+                                            status: "belum",
+                                            task: {
+                                                batas_waktu: {
+                                                    gte: now,
+                                                    lte: last_week
                                                 }
                                             }
                                         }
                                     }
+                                }
+                            })
+
+                            if (siswa) {
+                                const pelajaran = []
+
+                                const token = jwt.sign({
+                                    id: id,
+                                    nama: siswa.nama,
+                                    role: role,
+                                    kelas: siswa.class.kode
+                                }, process.env.JWT_SECRET, {
+                                    expiresIn: "1d"
                                 })
 
-                                if (siswa) {
-                                    const pelajaran = []
+                                const total = siswa.kehadiran.length
+                                const hadir = siswa.kehadiran.filter(k => k.status == "hadir").length
+                                let presentase = 0
 
-                                    const token = jwt.sign({
-                                        id: id,
-                                        nama: siswa.nama,
-                                        role: role,
-                                        kelas: siswa.class.kode
-                                    },
-                                        process.env.JWT_SECRET,
-                                        {
-                                            expiresIn: "1d"
-                                        })
+                                if (total > 0) {
+                                    presentase = Math.round((hadir / total) * 100)
+                                }
 
-                                    const total = siswa.kehadiran.length;
-                                    const hadir = siswa.kehadiran.filter(k => k.status === "hadir").length;
-                                    let presentase = 0;
+                                for (const item of siswa.class.roster) {
+                                    const lesson = item.teacher.lesson
+                                    const exists = pelajaran.some(p => p.kode == lesson.kode)
 
-                                    if (total > 0) {
-                                        presentase = Math.round((hadir / total) * 100);
-                                    }
-
-                                    for (const r of siswa.class.roster) {
-                                        const lesson = r.teacher.lesson;
-                                        const exists = pelajaran.some(p => p.kode == lesson.kode);
-
-                                        if (!exists) {
-                                            pelajaran.push(lesson);
-                                        }
-                                    }
-
-                                    data = {
-                                        token: token,
-                                        nama: siswa.nama,
-                                        kelas: siswa.class.nama,
-                                        foto: user.foto,
-                                        role: role,
-                                        kehadiran: presentase,
-                                        tugas: siswa.status_tugas.length,
-                                        pelajaran: pelajaran,
-                                        roster: siswa.class.roster.filter(r => r.hari == day_name)
-                                            .map(r => ({
-                                                id: r.id,
-                                                jam_mulai: r.jam_mulai,
-                                                jam_selesai: r.jam_selesai,
-                                                guru: r.teacher.nama,
-                                                pelajaran: r.teacher.lesson.nama
-                                            }))
+                                    if (!exists) {
+                                        pelajaran.push(lesson)
                                     }
                                 }
 
-                                break
+                                data = {
+                                    token: token,
+                                    nama: siswa.nama,
+                                    kelas: siswa.class.nama,
+                                    foto: user.foto,
+                                    role: role,
+                                    kehadiran: presentase,
+                                    tugas: siswa.status_tugas.length,
+                                    pelajaran: pelajaran,
+                                    roster: siswa.class.roster.filter(r => r.hari == hari).map(r => ({
+                                        id: r.id,
+                                        jam_mulai: r.jam_mulai,
+                                        jam_selesai: r.jam_selesai,
+                                        guru: r.teacher.nama,
+                                        pelajaran: r.teacher.lesson.nama
+                                    }))
+                                }
                             }
-                        case "guru":
-                            {
-                                const today = new Date();
-                                const day_name = today.toLocaleDateString("in", { weekday: "long" })
 
-                                const guru = await prisma.guru.findUnique({
-                                    where: {
-                                        nip: id
+                            break
+                        }
+
+                        case "guru": {
+                            const guru = await prisma.guru.findUnique({
+                                where: {
+                                    nip: id
+                                },
+                                select: {
+                                    nama: true,
+                                    class: {
+                                        select: {
+                                            kode: true,
+                                            nama: true
+                                        }
                                     },
-                                    select: {
-                                        nama: true,
-                                        class: {
-                                            select: {
-                                                kode: true,
-                                                nama: true
-                                            }
-                                        },
-                                        lesson: {
-                                            select: {
-                                                kode: true,
-                                                nama: true
-                                            }
-                                        },
-                                        roster: {
-                                            select: {
-                                                id: true,
-                                                hari: true,
-                                                jam_mulai: true,
-                                                jam_selesai: true,
-                                                class: {
-                                                    select: {
-                                                        kode: true,
-                                                        nama: true
-                                                    }
+                                    lesson: {
+                                        select: {
+                                            kode: true,
+                                            nama: true
+                                        }
+                                    },
+                                    roster: {
+                                        select: {
+                                            id: true,
+                                            hari: true,
+                                            jam_mulai: true,
+                                            jam_selesai: true,
+                                            class: {
+                                                select: {
+                                                    kode: true,
+                                                    nama: true
                                                 }
                                             }
                                         }
                                     }
+                                }
+                            })
+
+                            if (guru) {
+                                const kelas = []
+
+                                const token = jwt.sign({
+                                    id: id,
+                                    nama: guru.nama,
+                                    role: role,
+                                    kelas: guru.class ? guru.class.kode : null,
+                                    pelajaran: guru.lesson.kode
+                                }, process.env.JWT_SECRET, {
+                                    expiresIn: "1d"
                                 })
 
-                                if (guru) {
-                                    const kelas = []
+                                for (const r of guru.roster) {
+                                    const class_ = r.class
+                                    const exists = kelas.some(p => p.kode == class_.kode)
 
-                                    const token = jwt.sign({
-                                        id: id,
-                                        nama: guru.nama,
-                                        role: role,
-                                        kelas: guru.class ? guru.class.kode : null,
-                                        pelajaran: guru.lesson.kode
-                                    }, process.env.JWT_SECRET, {
-                                        expiresIn: "1d"
-                                    })
-
-                                    for (const r of guru.roster) {
-                                        const class_ = r.class;
-                                        const exists = kelas.some(p => p.kode == class_.kode);
-
-                                        if (!exists) {
-                                            kelas.push(class_);
-                                        }
-                                    }
-
-                                    data = {
-                                        token: token,
-                                        nama: guru.nama,
-                                        pelajaran: guru.lesson.nama,
-                                        wali: guru.class ? guru.class.nama : null,
-                                        foto: user.foto,
-                                        role: role,
-                                        kelas: kelas,
-                                        roster: guru.roster.filter(r => r.hari == day_name)
-                                            .map(r => ({
-                                                id: r.id,
-                                                jam_mulai: r.jam_mulai,
-                                                jam_selesai: r.jam_selesai,
-                                                kelas: r.class.nama
-                                            }))
+                                    if (!exists) {
+                                        kelas.push(class_)
                                     }
                                 }
 
-                                break
+                                data = {
+                                    token: token,
+                                    nama: guru.nama,
+                                    pelajaran: guru.lesson.nama,
+                                    wali: guru.class ? guru.class.nama : null,
+                                    foto: user.foto,
+                                    role: role,
+                                    kelas: kelas,
+                                    roster: guru.roster.filter(r => r.hari == hari)
+                                        .map(r => ({
+                                            id: r.id,
+                                            jam_mulai: r.jam_mulai,
+                                            jam_selesai: r.jam_selesai,
+                                            kelas: r.class.nama
+                                        }))
+                                }
                             }
+
+                            break
+                        }
                     }
 
                     if (data) {
@@ -258,8 +251,7 @@ export async function POST(request) {
                 output.message = "Duh kami tidak menemukan akun anda"
             }
         }
-    } catch (error) {
-        console.log(error)
+    } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

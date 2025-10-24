@@ -1,64 +1,74 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth, getOutput } from "../../../utils.js"
+import { CheckAuth, getOutput } from "@/app/api/utils"
 
 export async function GET(request, { params }) {
-    const output = getOutput()
+    let output = getOutput()
 
     try {
         const auth = CheckAuth(request)
-        const { id } = await params
+        const param = await params
+        const id = parseInt(param.id)
 
         if (!auth.error) {
-            if (auth.message.role == "siswa") {
-                const status = await prisma.status_tugas.findFirst({
-                    where: {
-                        tugas: parseInt(id),
-                        siswa: auth.message.id,
-                        status: "belum"
-                    },
-                    select: {
-                        id: true,
-                        task: {
-                            select: {
-                                judul: true,
-                                soal_kuis: true,
-                                jenis: true
-                            }
-                        }
-                    }
-                })
-
-                if (status && status.task.jenis == "kuis") {
-                    await prisma.status_tugas.update({
+            switch (auth.message.role) {
+                case "siswa": {
+                    const status = await prisma.status_tugas.findunique({
                         where: {
-                            id: status.id,
-                            tugas: parseInt(id),
-                            siswa: auth.message.id,
-                            status: "belum"
+                            status: "belum",
+                            siswa_tugas: {
+                                siswa: auth.message.id,
+                                tugas: id
+                            },
+                            task: {
+                                jenis: "kuis"
+                            }
                         },
-                        data: {
-                            tanggal: new Date()
+                        select: {
+                            id: true,
+                            task: {
+                                select: {
+                                    judul: true,
+                                    soal_kuis: true
+                                }
+                            }
                         }
                     })
 
-                    output.error = false
-                    output.message = "Berhasil mengambil data"
-                    output.data = {
-                        judul: status.task.judul,
-                        soal_kuis: status.task.soal_kuis.map(i => ({
-                            no: i.no,
-                            soal: i.soal,
-                            option: i.option
-                        }))
+                    if (status) {
+                        await prisma.status_tugas.update({
+                            where: {
+                                id: status.id,
+                                tugas: parseInt(id),
+                                siswa: auth.message.id,
+                                status: "belum"
+                            },
+                            data: {
+                                tanggal: new Date()
+                            }
+                        })
+
+                        output.error = false
+                        output.message = "Berhasil mengambil data"
+
+                        output.data = {
+                            judul: status.task.judul,
+                            soal_kuis: status.task.soal_kuis.map(i => ({
+                                no: i.no,
+                                soal: i.soal,
+                                option: i.option
+                            }))
+                        }
+                    } else {
+                        output.message = "Tidak menemukan tugas anda"
                     }
-                } else {
-                    output.message = "Tidak menemukan tugas anda"
+
+                    break
                 }
             }
         } else {
-            return Response.json(auth)
+            output = auth
         }
-    } catch (error) {
+    } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

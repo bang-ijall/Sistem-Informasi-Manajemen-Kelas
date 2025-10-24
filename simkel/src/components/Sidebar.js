@@ -64,7 +64,7 @@ export default function Sidebar({ nama, email, foto }) {
     const router = useRouter()
 
     const handleLogout = () => {
-        localStorage.removeItem("token")
+        document.cookie = "token=; path=/; max-age=0";
         router.push("/login")
     }
 
@@ -76,7 +76,7 @@ export default function Sidebar({ nama, email, foto }) {
         <>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow lg:hidden dark:bg-gray-800"
+                className="fixed z-50 p-2 bg-white rounded-md shadow top-4 left-4 lg:hidden dark:bg-gray-800"
             >
                 {/* Hamburger icon */}
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -92,14 +92,14 @@ export default function Sidebar({ nama, email, foto }) {
                     {navItems.map((item) => {
                         const isActive = pathname === item.path
                         return (
-                            <Link
+                            <a
                                 key={item.name}
                                 href={item.path}
                                 className={`${linkClasses} ${isActive ? activeClasses : inactiveClasses}`}
                             >
                                 <span className="w-6 h-6">{item.icon}</span>
                                 <span className="ml-3">{item.name}</span>
-                            </Link>
+                            </a>
                         )
                     })}
                 </nav>
@@ -113,7 +113,7 @@ export default function Sidebar({ nama, email, foto }) {
 
                     <button
                         onClick={handleLogout}
-                        className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                        className="p-2 transition rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                         title="Logout"
                     >
                         <LogOut className="w-5 h-5 text-[#ff0000]" />

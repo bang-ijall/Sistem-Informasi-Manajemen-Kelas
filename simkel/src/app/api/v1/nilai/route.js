@@ -1,8 +1,8 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth, getOutput } from "../../utils.js"
+import { CheckAuth, getOutput } from "@/app/api/utils"
 
 export async function GET(request) {
-    const output = getOutput()
+    let output = getOutput()
 
     try {
         const auth = CheckAuth(request)
@@ -34,25 +34,32 @@ export async function GET(request) {
                     })
 
                     output.error = false
-                    output.message = "Berhasil mengambil data"
 
-                    output.data = status.map(i => ({
-                        judul: i.task.judul,
-                        deskripsi: i.task.deskripsi,
-                        batas_waktu: i.task.batas_waktu,
-                        dokumen_tugas: i.task.dokumen_tugas,
-                        jenis: i.task.jenis,
-                        tanggal_tugas: i.task.tanggal,
-                        berkas: i.berkas,
-                        tanggal: i.tanggal,
-                        nilai: i.nilai
-                    }))
+                    if (status.length > 0) {
+                        output.message = "Berhasil mengambil data"
+
+                        output.data = status.map(i => ({
+                            judul: i.task.judul,
+                            deskripsi: i.task.deskripsi,
+                            batas_waktu: i.task.batas_waktu,
+                            dokumen_tugas: i.task.dokumen_tugas,
+                            jenis: i.task.jenis,
+                            tanggal_tugas: i.task.tanggal,
+                            berkas: i.berkas,
+                            tanggal: i.tanggal,
+                            nilai: i.nilai
+                        }))
+                    } else {
+                        output.message = "Anda belum diberikan nilai oleh guru"
+                    }
 
                     break
                 }
             }
+        } else {
+            output = auth
         }
-    } catch (error) {
+    } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
@@ -60,7 +67,7 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-    const output = getOutput()
+    let output = getOutput()
 
     try {
         const auth = CheckAuth(request)
@@ -92,8 +99,10 @@ export async function POST(request) {
                     break
                 }
             }
+        } else {
+            output = auth
         }
-    } catch (error) {
+    } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

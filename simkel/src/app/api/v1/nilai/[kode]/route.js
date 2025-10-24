@@ -1,4 +1,5 @@
-import { CheckAuth, getOutput } from "@/app/api/utils";
+import prisma from "@/libs/prisma"
+import { CheckAuth, getOutput } from "@/app/api/utils"
 
 export async function GET(request, { params }) {
     let output = getOutput()
@@ -9,7 +10,8 @@ export async function GET(request, { params }) {
         if (!auth.error) {
             switch (auth.message.role) {
                 case "guru": {
-                    const { kode } = await params
+                    const param = await params
+                    const kode = param.kode
 
                     let siswa = await prisma.siswa.findMany({
                         where: {
@@ -21,11 +23,7 @@ export async function GET(request, { params }) {
                                 where: {
                                     task: {
                                         guru: auth.message.id,
-                                        kelas: {
-                                            some: {
-                                                kode: kode
-                                            }
-                                        }
+                                        kelas: kode
                                     }
                                 },
                                 select: {
@@ -40,32 +38,38 @@ export async function GET(request, { params }) {
                         }
                     })
 
-                    siswa = siswa.sort((a, b) => a.nama.localeCompare(b.nama))
-                    const nama = siswa.map(i => i.nama)
-                    let nilai = {}
-
-                    siswa.map(i => {
-                        i.status_tugas.map(j => {
-                            if (!nilai[j.task.judul]) {
-                                nilai[j.task.judul] = Array(nama.length).fill(null)
-                            }
-
-                            const index = nama.indexOf(i.nama)
-                            nilai[j.task.judul][index] = j.nilai
-                        })
-                    })
-
                     output.error = false
-                    output.message = "Berhasil mengambil data"
-                    output.data = {
-                        siswa: nama,
-                        nilai: Object.entries(nilai)
-                            .sort(([a], [b]) => new Date(a) - new Date(b))
-                            .map(([i, j]) => ({
-                                judul: i,
-                                nilai: j
-                            }))
+
+                    if (siswa.length > 0) {
+                        output.message = "Berhasil mengambil data"
+                        siswa = siswa.sort((a, b) => a.nama.localeCompare(b.nama))
+                        const nama = siswa.map(i => i.nama)
+                        let nilai = {}
+
+                        siswa.map(i => {
+                            i.status_tugas.map(j => {
+                                if (!nilai[j.task.judul]) {
+                                    nilai[j.task.judul] = Array(nama.length).fill(null)
+                                }
+
+                                const index = nama.indexOf(i.nama)
+                                nilai[j.task.judul][index] = j.nilai
+                            })
+                        })
+
+                        output.data = {
+                            siswa: nama,
+                            nilai: Object.entries(nilai)
+                                .sort(([a], [b]) => new Date(a) - new Date(b))
+                                .map(([i, j]) => ({
+                                    judul: i,
+                                    nilai: j
+                                }))
+                        }
+                    } else {
+                        output.message = "Tidak menemukan nilai pada kelas ini"
                     }
+
                     break
                 }
             }
@@ -73,7 +77,6 @@ export async function GET(request, { params }) {
             output = auth
         }
     } catch (_) {
-        console.log(_)
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

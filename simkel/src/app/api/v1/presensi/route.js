@@ -1,11 +1,8 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth, getOutput } from "../../utils.js"
+import { CheckAuth, getOutput } from "@/app/api/utils"
 
 export async function GET(request) {
-    const output = {
-        error: true,
-        message: "Server kami menolak permintaan dari anda!"
-    }
+    let output = getOutput()
 
     try {
         const auth = CheckAuth(request)
@@ -39,8 +36,9 @@ export async function GET(request) {
                         }
                     })
 
+                    output.error = false
+
                     if (kehadiran.length > 0) {
-                        output.error = false
                         output.message = "Berhasil mengambil data"
 
                         const grouped = kehadiran.reduce((data, k) => {
@@ -77,17 +75,16 @@ export async function GET(request) {
 
                         output.data = Object.values(grouped)
                     } else {
-                        output.message = "Selama ini catatan kehadiran Anda tidak ada"
+                        output.message = "Selama ini, belum ada catatan kehadiran anda"
                     }
 
                     break
                 }
             }
         } else {
-            return Response.json(auth)
+            output = auth
         }
-    } catch (error) {
-        console.error(error.message)
+    } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
@@ -95,7 +92,7 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-    const output = getOutput()
+    let output = getOutput()
 
     try {
         const auth = CheckAuth(request)
@@ -104,10 +101,16 @@ export async function POST(request) {
             switch (auth.message.role) {
                 case "guru": {
                     const body = await request.formData()
-                    const id = body.get("id")
-                    const data = body.getAll("data[]")
+                    const id = parseInt(body.get("id"))
+                    const data = {}
 
-                    if (id && data.length > 0) {
+                    for (const [key, value] of body.entries()) {
+                        if (key !== "id") {
+                            data[key] = value;
+                        }
+                    }
+
+                    if (id > 0 && Object.keys(data).length > 0) {
                         const now = new Date()
 
                         const hari = new Intl.DateTimeFormat("id-ID", {
@@ -134,11 +137,11 @@ export async function POST(request) {
 
                         if (roster) {
                             await prisma.kehadiran.createMany({
-                                data: data.map(i => ({
+                                data: Object.entries(data).map(([siswa, status]) => ({
                                     tanggal: new Date(),
-                                    status: i.status,
-                                    siswa: i.siswa,
-                                    roster: id
+                                    status: status,
+                                    siswa: siswa,
+                                    roster: id,
                                 }))
                             })
 
@@ -150,9 +153,10 @@ export async function POST(request) {
                     break
                 }
             }
+        } else {
+            output = auth
         }
     } catch (_) {
-        console.log(_)
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

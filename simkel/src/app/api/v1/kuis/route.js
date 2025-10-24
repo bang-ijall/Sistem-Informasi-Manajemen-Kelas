@@ -1,8 +1,8 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth, getOutput } from "../../utils.js"
+import { CheckAuth, getOutput } from "@/app/api/utils"
 
 export async function POST(request) {
-    const output = getOutput()
+    let output = getOutput()
 
     try {
         const auth = CheckAuth(request)
@@ -15,11 +15,13 @@ export async function POST(request) {
                     const jawaban = JSON.parse(body.get("jawaban"))
 
                     if (id > 0 && jawaban.length >= 0) {
-                        const status = await prisma.status_tugas.findFirst({
+                        const status = await prisma.status_tugas.findUnique({
                             where: {
-                                tugas: id,
-                                siswa: auth.message.id,
-                                status: "belum"
+                                status: "belum",
+                                siswa_tugas: {
+                                    siswa: auth.message.id,
+                                    tugas: id
+                                }
                             },
                             select: {
                                 id: true,
@@ -135,9 +137,10 @@ export async function POST(request) {
                     break
                 }
             }
+        } else {
+            output = auth
         }
-    } catch (error) {
-        console.log(error)
+    } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

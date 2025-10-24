@@ -13,10 +13,8 @@ export default function LoadingModal({ isOpen = false, text = "Memuat data..." }
           p-6 space-y-4 shadow-lg
         "
       >
-        {/* 🌀 Spinner */}
         <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
 
-        {/* 📝 Text */}
         <p className="text-gray-700 dark:text-gray-300 text-sm">{text}</p>
       </div>
     </div>

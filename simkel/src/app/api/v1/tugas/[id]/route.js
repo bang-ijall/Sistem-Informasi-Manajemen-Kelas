@@ -1,5 +1,5 @@
 import prisma from "@/libs/prisma"
-import { CheckAuth, getOutput } from "../../../utils.js"
+import { CheckAuth, getOutput } from "@/app/api/utils"
 
 export async function PATCH(request, { params }) {
     let output = getOutput()
@@ -11,7 +11,8 @@ export async function PATCH(request, { params }) {
             switch (auth.message.role) {
                 case "guru": {
                     const body = await request.formData()
-                    const { id } = await params
+                    const param = await params
+                    const id = parseInt(param.id)
                     const judul = body.get("judul")
                     const deskripsi = body.get("deskripsi")
                     const batas_waktu = new Date(body.get("batas_waktu"))
@@ -19,9 +20,9 @@ export async function PATCH(request, { params }) {
                     const kelas = body.get("kelas")
                     let files = []
 
-                    if (parseInt(id) > 0 && judul != "" && deskripsi != "" && batas_waktu && dokumen_tugas.length > 0 && kelas != "") {
+                    if (id > 0 && judul != "" && batas_waktu != "" && (deskripsi != "" || dokumen_tugas.length > 0) && kelas != "") {
                         for (const file of dokumen_tugas) {
-                            if (typeof file === "string") {
+                            if (typeof file == "string") {
                                 files.push(file)
                                 continue
                             }
@@ -82,13 +83,14 @@ export async function DELETE(request, { params }) {
         if (!auth.error) {
             switch (auth.message.role) {
                 case "guru": {
-                    const { id } = await params
+                    const param = await params
+                    const id = parseInt(param.id)
 
-                    if (parseInt(id) > 0) {
+                    if (id > 0) {
                         await prisma.status_tugas.deleteMany({
                             where: {
                                 task: {
-                                    id: parseInt(id),
+                                    id: id,
                                     jenis: "submission",
                                     guru: auth.message.id
                                 }
@@ -97,7 +99,7 @@ export async function DELETE(request, { params }) {
 
                         await prisma.tugas.delete({
                             where: {
-                                id: parseInt(id),
+                                id: id,
                                 jenis: "submission",
                                 guru: auth.message.id
                             }
@@ -106,9 +108,9 @@ export async function DELETE(request, { params }) {
                         output.error = false
                         output.message = "Berhasil menghapus tugas"
                     }
-                }
 
                     break
+                }
             }
         } else {
             output = auth

@@ -4,8 +4,8 @@ import "@/app/globals.css";
 
 import { usePathname } from "next/navigation"
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
 import jwt from "jsonwebtoken"
+import Sidebar from "@/components/Sidebar"
 
 export default function Layout({ children }) {
     const [user, setUser] = useState({})
@@ -15,12 +15,19 @@ export default function Layout({ children }) {
     const isNotShow = exclude.includes(pathname)
 
     useEffect(() => {
-        const token = localStorage.getItem("token")
+        const token = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("token="))
+            ?.split("=")[1]
 
         if (!token && !isNotShow) {
             window.location.href = "/login"
-        } else {
-            setUser(jwt.decode(token))
+            return
+        }
+
+        if (token) {
+            const decoded = jwt.decode(token)
+            setUser(decoded)
         }
     }, [])
 
