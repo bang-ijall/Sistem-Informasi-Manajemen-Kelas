@@ -16,7 +16,7 @@ export async function GET(request, { params }) {
                 case "wali": {
                     const kelas = await prisma.kelas.findUnique({
                         where: {
-                            kode: auth.message.kode
+                            kode: auth.message.kelas
                         },
                         select: {
                             materi: {
