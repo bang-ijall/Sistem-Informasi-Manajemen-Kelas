@@ -18,10 +18,9 @@ export async function PATCH(request, { params }) {
                     const judul = body.get("judul")
                     const deskripsi = body.get("deskripsi")
                     const modul = body.getAll("modul[]")
-                    const kelas = body.get("kelas")
                     let files = []
 
-                    if (id > 0 && judul != "" && (deskripsi != "" || modul.length > 0) && kelas != "") {
+                    if (id > 0 && judul != "" && (deskripsi != "" || modul.length > 0)) {
                         for (const file of modul) {
                             if (typeof file == "string") {
                                 files.push(file)
@@ -51,13 +50,49 @@ export async function PATCH(request, { params }) {
                             data: {
                                 judul: judul,
                                 deskripsi: deskripsi,
-                                modul: modul,
-                                kelas: kelas
+                                modul: modul
                             }
                         })
 
                         output.error = false
                         output.message = "Berhasil mengirim materi"
+                    }
+
+                    break
+                }
+            }
+        } else {
+            output = auth
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+    }
+
+    return Response.json(output)
+}
+
+export async function DELETE(request, { params }) {
+    let output = getOutput()
+
+    try {
+        const auth = CheckAuth(request)
+
+        if (!auth.error) {
+            switch (auth.message.role) {
+                case "guru": {
+                    const param = await params
+                    const id = parseInt(param.id)
+
+                    if (id > 0) {
+                        await prisma.materi.delete({
+                            where: {
+                                id: id,
+                                guru: auth.message.id
+                            }
+                        })
+
+                        output.error = false
+                        output.message = "Berhasil menghapus materi"
                     }
 
                     break

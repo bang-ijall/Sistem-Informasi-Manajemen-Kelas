@@ -85,7 +85,8 @@ export async function PATCH(request, { params }) {
             switch (auth.message.role) {
                 case "guru": {
                     const body = await request.formData()
-                    const { id } = await params
+                    const param = await params
+                    const id = parseInt(param.id)
                     const judul = body.get("judul")
                     const deskripsi = body.get("deskripsi")
                     const batas_waktu = new Date(body.get("batas_waktu"))
@@ -93,7 +94,7 @@ export async function PATCH(request, { params }) {
                     if (id > 0 && judul != "" && deskripsi != "" && batas_waktu != "") {
                         await prisma.tugas.update({
                             where: {
-                                id: parseInt(id),
+                                id: id,
                                 jenis: "kuis",
                                 guru: auth.message.id
                             },
@@ -130,22 +131,25 @@ export async function DELETE(request, { params }) {
         if (!auth.error) {
             switch (auth.message.role) {
                 case "guru": {
-                    const { id } = await params
+                    const param = await params
+                    const id = parseInt(param.id)
 
-                    if (parseInt(id) > 0) {
+                    if (id > 0) {
                         await prisma.status_tugas.deleteMany({
                             where: {
                                 task: {
-                                    id: parseInt(id),
-                                    jenis: "kuis"
+                                    id: id,
+                                    jenis: "kuis",
+                                    guru: auth.message.id
                                 }
                             }
                         })
 
                         await prisma.tugas.delete({
                             where: {
-                                id: parseInt(id),
-                                jenis: "kuis"
+                                id: id,
+                                jenis: "kuis",
+                                guru: auth.message.id
                             }
                         })
 

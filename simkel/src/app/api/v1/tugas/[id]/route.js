@@ -17,10 +17,9 @@ export async function PATCH(request, { params }) {
                     const deskripsi = body.get("deskripsi")
                     const batas_waktu = new Date(body.get("batas_waktu"))
                     const dokumen_tugas = body.getAll("dokumen_tugas[]")
-                    const kelas = body.get("kelas")
                     let files = []
 
-                    if (id > 0 && judul != "" && batas_waktu != "" && (deskripsi != "" || dokumen_tugas.length > 0) && kelas != "") {
+                    if (id > 0 && judul != "" && batas_waktu != "" && (deskripsi != "" || dokumen_tugas.length > 0)) {
                         for (const file of dokumen_tugas) {
                             if (typeof file == "string") {
                                 files.push(file)
@@ -44,7 +43,7 @@ export async function PATCH(request, { params }) {
 
                         await prisma.tugas.update({
                             where: {
-                                id: parseInt(id),
+                                id: id,
                                 jenis: "submission",
                                 guru: auth.message.id
                             },
@@ -91,7 +90,6 @@ export async function DELETE(request, { params }) {
                             where: {
                                 task: {
                                     id: id,
-                                    jenis: "submission",
                                     guru: auth.message.id
                                 }
                             }
@@ -100,7 +98,6 @@ export async function DELETE(request, { params }) {
                         await prisma.tugas.delete({
                             where: {
                                 id: id,
-                                jenis: "submission",
                                 guru: auth.message.id
                             }
                         })

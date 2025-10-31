@@ -32,7 +32,17 @@ export async function GET(request, { params }) {
                                     judul: true,
                                     deskripsi: true,
                                     modul: true,
-                                    tanggal: true
+                                    tanggal: true,
+                                    teacher: {
+                                        select: {
+                                            nama: true,
+                                            lesson: {
+                                                select: {
+                                                    nama: true
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             },
                             tugas: {
@@ -52,6 +62,16 @@ export async function GET(request, { params }) {
                                     jenis: true,
                                     tanggal: true,
                                     waktu_kuis: true,
+                                    teacher: {
+                                        select: {
+                                            nama: true,
+                                            lesson: {
+                                                select: {
+                                                    nama: true
+                                                }
+                                            }
+                                        }
+                                    },
                                     status_tugas: {
                                         where: {
                                             siswa: auth.message.id
@@ -80,8 +100,16 @@ export async function GET(request, { params }) {
                                     batas_waktu: i.batas_waktu,
                                     berkas: i.dokumen_tugas,
                                     jenis: i.jenis,
+                                    guru: i.teacher.nama,
+                                    pelajaran: i.teacher.lesson.nama,
                                     status: i.status_tugas[0].status,
-                                    nilai: i.status_tugas[0].nilai
+                                    data: {
+                                        id: i.status_tugas[0].id,
+                                        deskripsi: i.status_tugas[0].deskripsi,
+                                        berkas: i.status_tugas[0].berkas,
+                                        tanggal: i.status_tugas[0].tanggal,
+                                        nilai: i.status_tugas[0].nilai
+                                    }
                                 })),
                                 ...kelas.materi.map(i => ({
                                     id: i.id,
@@ -89,7 +117,9 @@ export async function GET(request, { params }) {
                                     judul: i.judul,
                                     deskripsi: i.deskripsi,
                                     berkas: i.modul,
-                                    jenis: "materi"
+                                    jenis: "materi",
+                                    guru: i.teacher.nama,
+                                    pelajaran: i.teacher.lesson.nama,
                                 }))
                             ]
                         } else {
@@ -120,7 +150,12 @@ export async function GET(request, { params }) {
                                     judul: true,
                                     deskripsi: true,
                                     modul: true,
-                                    tanggal: true
+                                    tanggal: true,
+                                    class: {
+                                        select: {
+                                            nama: true
+                                        }
+                                    }
                                 }
                             },
                             tugas: {
@@ -191,7 +226,7 @@ export async function GET(request, { params }) {
                                     jenis: i.jenis,
                                     waktu_kuis: i.waktu_kuis,
                                     soal_kuis: i.soal_kuis,
-                                    dokumen_tugas: i.dokumen_tugas,
+                                    berkas: i.dokumen_tugas,
                                     tanggal: i.tanggal,
                                     kelas: i.class.nama,
                                     siswa: i.status_tugas.map((j) => ({
@@ -207,10 +242,11 @@ export async function GET(request, { params }) {
                                 })),
                                 ...kelas.materi.map(i => ({
                                     id: i.id,
-                                    tanggal: i.tanggal,
                                     judul: i.judul,
                                     deskripsi: i.deskripsi,
                                     berkas: i.modul,
+                                    tanggal: i.tanggal,
+                                    kelas: i.class.nama,
                                     jenis: "materi"
                                 }))
                             ]

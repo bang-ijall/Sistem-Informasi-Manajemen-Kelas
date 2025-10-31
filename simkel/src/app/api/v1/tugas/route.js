@@ -59,7 +59,7 @@ export async function GET(request) {
                             judul: i.task.judul,
                             deskripsi: i.task.deskripsi,
                             batas_waktu: i.task.batas_waktu,
-                            dokumen_tugas: i.task.dokumen_tugas,
+                            berkas: i.task.dokumen_tugas,
                             jenis: i.task.jenis,
                             guru: i.task.teacher.nama,
                             pelajaran: i.task.teacher.lesson.nama,
@@ -140,7 +140,7 @@ export async function GET(request) {
                             jenis: i.jenis,
                             waktu_kuis: i.waktu_kuis,
                             soal_kuis: i.soal_kuis,
-                            dokumen_tugas: i.dokumen_tugas,
+                            berkas: i.dokumen_tugas,
                             tanggal: i.tanggal,
                             kelas: i.class.nama,
                             siswa: i.status_tugas.map((j) => ({
