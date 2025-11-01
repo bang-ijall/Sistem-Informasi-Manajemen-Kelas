@@ -18,9 +18,10 @@ export async function PATCH(request, { params }) {
                     const judul = body.get("judul")
                     const deskripsi = body.get("deskripsi")
                     const modul = body.getAll("modul[]")
+                    const kelas = body.get("kelas")
                     let files = []
 
-                    if (id > 0 && judul != "" && (deskripsi != "" || modul.length > 0)) {
+                    if (id > 0 && judul != "" && (deskripsi != "" || modul.length > 0) && kelas != "") {
                         for (const file of modul) {
                             if (typeof file == "string") {
                                 files.push(file)
