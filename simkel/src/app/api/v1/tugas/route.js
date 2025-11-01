@@ -96,6 +96,7 @@ export async function GET(request) {
                             tanggal: true,
                             class: {
                                 select: {
+                                    kode: true,
                                     nama: true
                                 }
                             },
@@ -142,6 +143,7 @@ export async function GET(request) {
                             soal_kuis: i.soal_kuis,
                             berkas: i.dokumen_tugas,
                             tanggal: i.tanggal,
+                            class: i.class.kode,
                             kelas: i.class.nama,
                             siswa: i.status_tugas.map((j) => ({
                                 id: j.id,

@@ -23,6 +23,7 @@ export async function GET(request) {
                             tanggal: true,
                             class: {
                                 select: {
+                                    kode: true,
                                     nama: true
                                 }
                             }
@@ -39,6 +40,7 @@ export async function GET(request) {
                             deskripsi: i.deskripsi,
                             modul: i.modul,
                             tanggal: i.tanggal,
+                            class: i.class.kode,
                             kelas: i.class.nama
                         }))
                     }
