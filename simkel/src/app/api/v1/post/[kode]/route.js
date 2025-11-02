@@ -62,6 +62,7 @@ export async function GET(request, { params }) {
                                     jenis: true,
                                     tanggal: true,
                                     waktu_kuis: true,
+                                    soal_kuis: true,
                                     teacher: {
                                         select: {
                                             nama: true,
@@ -99,6 +100,8 @@ export async function GET(request, { params }) {
                                     deskripsi: i.deskripsi,
                                     batas_waktu: i.batas_waktu,
                                     berkas: i.dokumen_tugas,
+                                    waktu_kuis: i.waktu_kuis,
+                                    soal_kuis: i.soal_kuis.length,
                                     jenis: i.jenis,
                                     guru: i.teacher.nama,
                                     pelajaran: i.teacher.lesson.nama,

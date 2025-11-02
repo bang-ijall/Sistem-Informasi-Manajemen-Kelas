@@ -1,5 +1,106 @@
 import prisma from "@/libs/prisma"
 import { CheckAuth, getOutput } from "@/app/api/utils"
+import fs from "fs"
+import path from "path"
+
+export async function GET(request, { params }) {
+    let output = getOutput()
+    let code = 200
+
+    try {
+        const auth = CheckAuth(request)
+
+        if (!auth.error) {
+            const param = await params
+            const id = param.id
+
+            switch (auth.message.role) {
+                case "siswa":
+                case "wali": {
+                    const status = await prisma.status_tugas.findMany({
+                        where: {
+                            siswa: auth.message.id,
+                            status: id
+                        },
+                        select: {
+                            id: true,
+                            nilai: true,
+                            deskripsi: true,
+                            berkas: true,
+                            tanggal: true,
+                            status: true,
+                            task: {
+                                select: {
+                                    id: true,
+                                    judul: true,
+                                    deskripsi: true,
+                                    batas_waktu: true,
+                                    dokumen_tugas: true,
+                                    jenis: true,
+                                    tanggal: true,
+                                    waktu_kuis: true,
+                                    soal_kuis: true,
+                                    teacher: {
+                                        select: {
+                                            nama: true,
+                                            lesson: {
+                                                select: {
+                                                    nama: true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    })
+
+                    output.error = false
+
+                    if (status.length > 0) {
+                        output.message = "Berhasil mengambil data"
+
+                        output.data = status.map(i => ({
+                            id: i.task.id,
+                            tanggal: i.task.tanggal,
+                            judul: i.task.judul,
+                            deskripsi: i.task.deskripsi,
+                            batas_waktu: i.task.batas_waktu,
+                            berkas: i.task.dokumen_tugas,
+                            waktu_kuis: i.task.waktu_kuis,
+                            soal_kuis: i.task.soal_kuis.length,
+                            jenis: i.task.jenis,
+                            guru: i.task.teacher.nama,
+                            pelajaran: i.task.teacher.lesson.nama,
+                            status: i.status,
+                            data: {
+                                id: i.id,
+                                deskripsi: i.deskripsi,
+                                berkas: i.berkas,
+                                tanggal: i.tanggal,
+                                nilai: i.nilai
+                            }
+                        }))
+                    } else {
+                        output.message = "Tidak menemukan tugas anda"
+                    }
+
+                    break
+                }
+            }
+        } else {
+            output = auth
+            code = 403
+        }
+    } catch (_) {
+        output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
+        code = 500
+    }
+
+    return Response.json(output, {
+        status: code
+    })
+}
 
 export async function PATCH(request, { params }) {
     let output = getOutput()

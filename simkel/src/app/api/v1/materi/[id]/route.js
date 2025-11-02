@@ -51,7 +51,7 @@ export async function PATCH(request, { params }) {
                             data: {
                                 judul: judul,
                                 deskripsi: deskripsi,
-                                modul: modul
+                                modul: files
                             }
                         })
 
