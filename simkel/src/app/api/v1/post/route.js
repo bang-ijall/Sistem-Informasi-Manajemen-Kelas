@@ -100,7 +100,7 @@ export async function GET(request, res) {
                                 batas_waktu: i.batas_waktu,
                                 jenis: i.jenis,
                                 waktu_kuis: i.waktu_kuis,
-                                soal_kuis: i.soal_kuis,
+                                jumlah_soal: i.soal_kuis ? i.soal_kuis.length : null,
                                 berkas: i.dokumen_tugas,
                                 tanggal: i.tanggal,
                                 kelas: i.class.nama,

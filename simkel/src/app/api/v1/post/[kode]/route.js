@@ -101,7 +101,7 @@ export async function GET(request, { params }) {
                                     batas_waktu: i.batas_waktu,
                                     berkas: i.dokumen_tugas,
                                     waktu_kuis: i.waktu_kuis,
-                                    soal_kuis: i.soal_kuis.length,
+                                    jumlah_soal: i.soal_kuis ? i.soal_kuis.length : null,
                                     jenis: i.jenis,
                                     guru: i.teacher.nama,
                                     pelajaran: i.teacher.lesson.nama,

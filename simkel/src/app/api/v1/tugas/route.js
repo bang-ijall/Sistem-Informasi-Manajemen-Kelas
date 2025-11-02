@@ -63,7 +63,7 @@ export async function GET(request) {
                             batas_waktu: i.task.batas_waktu,
                             berkas: i.task.dokumen_tugas,
                             waktu_kuis: i.task.waktu_kuis,
-                            soal_kuis: i.task.soal_kuis.length,
+                            jumlah_soal: i.task.soal_kuis ? i.task.soal_kuis.length : null,
                             jenis: i.task.jenis,
                             guru: i.task.teacher.nama,
                             pelajaran: i.task.teacher.lesson.nama,
@@ -171,6 +171,7 @@ export async function GET(request) {
             output = auth
         }
     } catch (_) {
+        console.log(_)
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 
