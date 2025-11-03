@@ -171,7 +171,6 @@ export async function GET(request) {
             output = auth
         }
     } catch (_) {
-        console.log(_)
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
     }
 

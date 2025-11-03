@@ -12,7 +12,7 @@ export async function GET(request, { params }) {
         if (!auth.error) {
             switch (auth.message.role) {
                 case "siswa": {
-                    const status = await prisma.status_tugas.findunique({
+                    const status = await prisma.status_tugas.findUnique({
                         where: {
                             status: "belum",
                             siswa_tugas: {
