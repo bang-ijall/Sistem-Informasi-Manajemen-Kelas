@@ -17,7 +17,7 @@ export default async function Server() {
     let body = await res.json()
 
     const pelajaran = body.data
-    const field = Object.keys(body.data[0])
+    const field = pelajaran > 0 ? Object.keys(pelajaran[0]) : []
 
     return <Page pelajaran={pelajaran} field={field} />
 }

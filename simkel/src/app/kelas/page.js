@@ -17,7 +17,7 @@ export default async function Server() {
     let body = await res.json()
 
     const kelas = body.data
-    const field = Object.keys(body.data[0]).filter((f) => f != "guru")
+    const field = kelas.length > 0 ? Object.keys(kelas[0]).filter((f) => f != "guru") : []
 
     return <Page kelas={kelas} field={field} />
 }

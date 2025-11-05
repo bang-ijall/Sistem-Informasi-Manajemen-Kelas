@@ -21,7 +21,7 @@ export default async function Server() {
     }
 
     const guru = body.data
-    const field = Object.keys(body.data[0]).filter((f) => f != "class" && f != "lesson")
+    const field = guru.length > 0 ? Object.keys(guru[0]).filter((f) => f != "class" && f != "lesson") : []
 
     res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/admin/kelas`, {
         headers: { Authorization: `Bearer ${token}` }

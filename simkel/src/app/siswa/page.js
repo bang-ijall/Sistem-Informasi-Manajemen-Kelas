@@ -21,7 +21,7 @@ export default async function Server() {
     }
 
     const siswa = body.data
-    const field = Object.keys(body.data[0]).filter((f) => f != "class")
+    const field = siswa.length > 0 ? Object.keys(siswa[0]).filter((i) => i != "class") : []
 
     res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/admin/kelas`, {
         headers: { Authorization: `Bearer ${token}` }

@@ -66,30 +66,36 @@ export default function DataTable({ columns = [], data = [], loading = false, on
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
                     <thead className="bg-gray-50 dark:bg-gray-900">
                         <tr>
-                            {(
+                            <th
+                                scope="col"
+                                className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400"
+                            >
+                                No.
+                            </th>
+                            {columns.map((col) => (
                                 <th
+                                    key={col.accessor || col.header}
                                     scope="col"
                                     className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400"
                                 >
-                                    No.
+                                    {col.header}
                                 </th>
-                            )}
-                            {
-                                columns.map((col) => (
-                                    <th
-                                        key={col.accessor || col.header}
-                                        scope="col"
-                                        className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400"
-                                    >
-                                        {col.header}
-                                    </th>
-                                ))}
+                            ))}
                             <th scope="col" className="px-6 py-3 text-xs font-medium text-right text-gray-500 dark:text-gray-400" />
                         </tr>
                     </thead>
 
                     <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-950 dark:divide-gray-800">
-                        {(
+                        {data.length === 0 ? (
+                            <tr>
+                                <td
+                                    colSpan={columns.length + 2}
+                                    className="px-6 py-6 text-sm text-center text-gray-500 dark:text-gray-400"
+                                >
+                                    {loading ? "Loading..." : "Tidak ada data"}
+                                </td>
+                            </tr>
+                        ) : (
                             data.map((item, i) => (
                                 <tr key={item.id ?? i} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                     <td className="px-6 py-4 text-sm text-gray-800 whitespace-nowrap dark:text-gray-300">

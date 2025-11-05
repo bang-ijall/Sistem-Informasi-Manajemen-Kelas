@@ -17,7 +17,7 @@ export default async function Server() {
     let body = await res.json()
 
     const roster = body.data
-    const field = Object.keys(body.data[Object.keys(body.data)[0]][0]).filter((f) => f != "class" && f != "teacher")
+    const field = roster.length > 0 ? Object.keys(roster[Object.keys(roster)[0]][0]).filter((f) => f != "class" && f != "teacher") : []
 
     res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/admin/kelas`, {
         headers: { Authorization: `Bearer ${token}` }

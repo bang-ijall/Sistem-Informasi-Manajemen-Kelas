@@ -9,9 +9,6 @@
     "lint": "next lint",
     "tailwind:init": "tailwindcss init -p"
   },
-  "prisma": {
-    "seed": "node prisma/seed.js"
-  },
   "dependencies": {
     "@nextui-org/react": "^2.6.11",
     "@prisma/client": "^6.3.1",
