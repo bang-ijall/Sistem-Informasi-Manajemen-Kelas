@@ -146,14 +146,22 @@ export async function GET(request) {
                     judul: i.judul,
                     guru: i.teacher.nama,
                     kelas: i.class.nama,
-                    tanggal: i.tanggal
+                    tanggal: new Date(i.tanggal).toLocaleDateString("id-ID", {
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric"
+                    })
                 })),
                 materi_baru: materi.map(i => ({
                     id: i.id,
                     judul: i.judul,
                     guru: i.teacher.nama,
                     kelas: i.class.nama,
-                    tanggal: i.tanggal
+                    tanggal: new Date(i.tanggal).toLocaleDateString("id-ID", {
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric"
+                    })
                 }))
             }
         } else {

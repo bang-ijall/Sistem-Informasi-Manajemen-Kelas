@@ -130,7 +130,7 @@ export default function Page({ data }) {
                         {data.tugas_baru.map((t) => (
                             <li key={t.id} className="flex items-center justify-between">
                                 <span>{t.judul} dari {t.guru} di kelas {t.kelas}</span>
-                                <span className="text-sm text-gray-500">{new Date(t.tanggal).toLocaleDateString()}</span>
+                                <span className="text-sm text-gray-500">{t.tanggal}</span>
                             </li>
                         ))}
                     </ul>
@@ -142,7 +142,7 @@ export default function Page({ data }) {
                         {data.materi_baru.map((m) => (
                             <li key={m.id} className="flex items-center justify-between">
                                 <span>{m.judul} dari {m.guru} di kelas {m.kelas}</span>
-                                <span className="text-sm text-gray-500">{new Date(m.tanggal).toLocaleDateString()}</span>
+                                <span className="text-sm text-gray-500">{m.tanggal}</span>
                             </li>
                         ))}
                     </ul>
