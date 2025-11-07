@@ -145,13 +145,15 @@ export async function GET(request) {
                     id: i.id,
                     judul: i.judul,
                     guru: i.teacher.nama,
-                    kelas: i.class.nama
+                    kelas: i.class.nama,
+                    tanggal: i.tanggal
                 })),
                 materi_baru: materi.map(i => ({
                     id: i.id,
                     judul: i.judul,
                     guru: i.teacher.nama,
-                    kelas: i.class.nama
+                    kelas: i.class.nama,
+                    tanggal: i.tanggal
                 }))
             }
         } else {
