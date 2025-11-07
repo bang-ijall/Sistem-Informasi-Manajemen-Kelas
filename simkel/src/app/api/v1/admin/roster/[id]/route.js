@@ -37,6 +37,7 @@ export async function PATCH(request, { params }) {
                     }]
                 },
                 select: {
+                    id: true,
                     teacher: {
                         select: {
                             nama: true,
@@ -50,7 +51,7 @@ export async function PATCH(request, { params }) {
                 }
             })
 
-            if (!roster) {
+            if (!roster || roster.id == id) {
                 await prisma.roster.update({
                     where: {
                         id: id
@@ -87,7 +88,7 @@ export async function PATCH(request, { params }) {
     return Response.json(output)
 }
 
-export async function DELETE(_, { params }) {
+export async function DELETE(request, { params }) {
     var { id } = await params
     id = Number(id)
 

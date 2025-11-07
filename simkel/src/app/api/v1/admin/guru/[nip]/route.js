@@ -50,13 +50,17 @@ export async function PATCH(request, { params }) {
                         update: {
                             nama: nama,
                             hp: body.get("hp"),
-                            ...(kelas && kelas != "-" ? {
+                            ...(kelas && kelas != "" ? {
                                 class: {
                                     connect: {
                                         kode: kelas,
                                     },
                                 },
-                            } : {}),
+                            } : {
+                                class: {
+                                    disconnect: true
+                                }
+                            }),
                             lesson: {
                                 connect: {
                                     kode: body.get("pelajaran")

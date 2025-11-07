@@ -8,6 +8,7 @@ import Modal from "@/components/Modal"
 import DataTable from "@/components/DataTable"
 import LoadingModal from "@/components/LoadingModal"
 import { getPassword } from "../api/utils"
+import Cookies from "js-cookie"
 
 function Form({ data, kelas, onSubmit, onClose }) {
     const required = ["nisn", "nama", "foto", "hp", "tahun_masuk", "kelas", "nama_wali", "hp_wali"]
@@ -211,7 +212,7 @@ export default function Page({ siswa, kelas, field }) {
 
     const handleSimpan = async (form) => {
         setLoading(true)
-        const token = localStorage.getItem("token")
+        const token = Cookies.get("token")
 
         try {
             const method = edit ? "PATCH" : "POST"
@@ -241,11 +242,9 @@ export default function Page({ siswa, kelas, field }) {
                     confirmButtonText: "OK",
                 })
 
-                fetchAPI(token)
-                setOpenPopup(false)
-                setEdit(null)
+                window.location.href = "/siswa"
             } else {
-                if (body.message == "Unauthorized") {
+                if (body.message == "Unauthorization") {
                     window.location.href = "/login"
                     return
                 }
@@ -280,7 +279,7 @@ export default function Page({ siswa, kelas, field }) {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 setLoading(true)
-                const token = localStorage.getItem("token")
+                const token = Cookies.get("token")
 
                 try {
                     const res = await fetch(`/api/v1/admin/siswa/${siswa.nisn}`, {
@@ -300,9 +299,9 @@ export default function Page({ siswa, kelas, field }) {
                             confirmButtonText: "OK",
                         })
 
-                        fetchAPI(token)
+                        window.location.href = "/siswa"
                     } else {
-                        if (body.message == "Unauthorized") {
+                        if (body.message == "Unauthorization") {
                             window.location.href = "/login"
                             return
                         }

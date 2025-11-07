@@ -1,12 +1,9 @@
-import { CheckAuth } from "@/app/api/utils"
+import { CheckAuth, getOutput } from "@/app/api/utils"
 import prisma from "@/libs/prisma"
 
-const output = {
-    error: true,
-    message: "Fetch failed",
-}
-
 export async function PATCH(request, { params }) {
+    let output = getOutput()
+
     try {
         const auth = CheckAuth(request)
 
@@ -28,7 +25,7 @@ export async function PATCH(request, { params }) {
             output.error = false
             output.message = "Berhasil memperbarui data"
         } else {
-            output.message = auth.message
+            output = auth
         }
     } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"
@@ -37,7 +34,8 @@ export async function PATCH(request, { params }) {
     return Response.json(output)
 }
 
-export async function DELETE(_, { params }) {
+export async function DELETE(request, { params }) {
+    let output = getOutput()
     const { kode } = await params
 
     try {
@@ -53,7 +51,7 @@ export async function DELETE(_, { params }) {
             output.error = false
             output.message = "Berhasil menghapus data"
         } else {
-            output.message = auth.message
+            output = auth
         }
     } catch (_) {
         output.message = "Ada masalah pada server kami. Silahkan coba lagi nanti"

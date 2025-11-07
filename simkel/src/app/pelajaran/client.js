@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader"
 import Modal from "@/components/Modal"
 import DataTable from "@/components/DataTable"
 import LoadingModal from "@/components/LoadingModal"
+import Cookies from "js-cookie"
 
 function Form({ data, onSubmit, onClose }) {
     const required = ["kode", "nama", "kategori"]
@@ -105,7 +106,7 @@ export default function Page({ pelajaran, field }) {
 
     const handleSimpan = async (form) => {
         setLoading(true)
-        const token = localStorage.getItem("token")
+        const token = Cookies.get("token")
 
         try {
             const method = edit ? "PATCH" : "POST"
@@ -135,11 +136,9 @@ export default function Page({ pelajaran, field }) {
                     confirmButtonText: "OK",
                 })
 
-                fetchAPI(token)
-                setOpenPopup(false)
-                setEdit(null)
+                window.location.href = "/pelajaran"
             } else {
-                if (body.message == "Unauthorized") {
+                if (body.message == "Unauthorization") {
                     window.location.href = "/login"
                     return
                 }
@@ -174,11 +173,11 @@ export default function Page({ pelajaran, field }) {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 setLoading(true)
-                const token = localStorage.getItem("token")
+                const token = Cookies.get("token")
 
                 try {
                     const res = await fetch(`/api/v1/admin/pelajaran/${pelajaran.kode}`, {
-                        header: {
+                        headers: {
                             Authorization: `Bearer ${token}`
                         },
                         method: "DELETE"
@@ -194,9 +193,9 @@ export default function Page({ pelajaran, field }) {
                             confirmButtonText: "OK",
                         })
 
-                        fetchAPI(token)
+                        window.location.href = "/pelajaran"
                     } else {
-                        if (body.message == "Unauthorized") {
+                        if (body.message == "Unauthorization") {
                             window.location.href = "/login"
                             return
                         }

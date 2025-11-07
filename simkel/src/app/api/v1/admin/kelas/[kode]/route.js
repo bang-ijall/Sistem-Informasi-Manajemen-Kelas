@@ -36,7 +36,7 @@ export async function PATCH(request, { params }) {
     return Response.json(output)
 }
 
-export async function DELETE(_, { params }) {
+export async function DELETE(request, { params }) {
     const { kode } = await params
 
     try {

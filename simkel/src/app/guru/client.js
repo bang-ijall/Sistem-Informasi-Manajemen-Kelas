@@ -8,6 +8,7 @@ import Modal from "@/components/Modal"
 import DataTable from "@/components/DataTable"
 import LoadingModal from "@/components/LoadingModal"
 import { getPassword } from "../api/utils"
+import Cookies from "js-cookie"
 
 function Form({ data, kelas, pelajaran, onSubmit, onClose }) {
     const required = ["nip", "nama", "foto", "hp", "pelajaran"]
@@ -165,7 +166,7 @@ function Form({ data, kelas, pelajaran, onSubmit, onClose }) {
                                 >
                                     <option value="">Pilih kelas</option>
                                     {kelas.map((k) => (
-                                        <option key={k.kode} value={k.kode} disabled={!k.kosong}>
+                                        <option key={k.kode} value={k.kode} disabled={k.guru != null}>
                                             {k.kode + " - " + k.nama}
                                         </option>
                                     ))}
@@ -178,7 +179,7 @@ function Form({ data, kelas, pelajaran, onSubmit, onClose }) {
                                     required={isRequired}
                                     className="w-full px-3 py-2 text-sm border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700"
                                 >
-                                    <option value="">Pilih pelajaran</option>
+                                    <option value="" disabled>Pilih pelajaran</option>
                                     {pelajaran.map((p) => (
                                         <option key={p.kode} value={p.kode}>
                                             {p.kode + " - " + p.nama}
@@ -225,7 +226,7 @@ export default function Page({ guru, kelas, pelajaran, field }) {
 
     const handleSimpan = async (form) => {
         setLoading(true)
-        const token = localStorage.getItem("token")
+        const token = Cookies.get("token")
 
         try {
             const method = edit ? "PATCH" : "POST"
@@ -255,11 +256,9 @@ export default function Page({ guru, kelas, pelajaran, field }) {
                     confirmButtonText: "OK",
                 })
 
-                fetchAPI(token)
-                setOpenPopup(false)
-                setEdit(null)
+                window.location.href = "/guru"
             } else {
-                if (body.message == "Unauthorized") {
+                if (body.message == "Unauthorization") {
                     window.location.href = "/login"
                     return
                 }
@@ -294,10 +293,13 @@ export default function Page({ guru, kelas, pelajaran, field }) {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 setLoading(true)
-                const token = localStorage.getItem("token")
+                const token = Cookies.get("token")
 
                 try {
                     const res = await fetch(`/api/v1/admin/guru/${guru.nip}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
                         method: "DELETE"
                     })
 
@@ -311,9 +313,9 @@ export default function Page({ guru, kelas, pelajaran, field }) {
                             confirmButtonText: "OK",
                         })
 
-                        fetchAPI(token)
+                        window.location.href = "/guru"
                     } else {
-                        if (body.message == "Unauthorized") {
+                        if (body.message == "Unauthorization") {
                             window.location.href = "/login"
                             return
                         }

@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader"
 import Modal from "@/components/Modal"
 import DataTable from "@/components/DataTable"
 import LoadingModal from "@/components/LoadingModal"
+import Cookies from "js-cookie"
 
 function Form({ data, kelas, pelajaran, onSubmit, onClose }) {
     const required = ["kelas", "pelajaran", "hari", "jam_mulai", "jam_selesai"]
@@ -142,7 +143,7 @@ export default function Page({ roster, kelas, pelajaran, field }) {
 
     const handleSimpan = async (form) => {
         setLoading(true)
-        const token = localStorage.getItem("token")
+        const token = Cookies.get("token")
 
         try {
             const method = edit ? "PATCH" : "POST"
@@ -172,11 +173,9 @@ export default function Page({ roster, kelas, pelajaran, field }) {
                     confirmButtonText: "OK",
                 })
 
-                fetchAPI(token)
-                setOpenPopup(false)
-                setEdit(null)
+                window.location.href = "/roster"
             } else {
-                if (body.message == "Unauthorized") {
+                if (body.message == "Unauthorization") {
                     window.location.href = "/login"
                     return
                 }
@@ -211,7 +210,7 @@ export default function Page({ roster, kelas, pelajaran, field }) {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 setLoading(true)
-                const token = localStorage.getItem("token")
+                const token = Cookies.get("token")
 
                 try {
                     const res = await fetch(`/api/v1/admin/roster/${roster.id}`, {
@@ -231,9 +230,9 @@ export default function Page({ roster, kelas, pelajaran, field }) {
                             confirmButtonText: "OK",
                         })
 
-                        fetchAPI(token)
+                        window.location.href = "/roster"
                     } else {
-                        if (body.message == "Unauthorized") {
+                        if (body.message == "Unauthorization") {
                             window.location.href = "/login"
                             return
                         }
